@@ -13,7 +13,7 @@ Download my code archive & unrar to c: (or where U want)
 
 Start grandMA2
 
-Add user "dot2" - password "remote"
+Add user "apcmini" - password "remote"
 
 Tunr on web remote.
 
@@ -65,7 +65,7 @@ Executors (3 x 5 view)
 
 faders
 
-1 - 8
+1 - 8 + grand master fader
 
 
 
@@ -86,7 +86,7 @@ Ececutors (3 x 5 view)
 
 faders
 
-8 - 15
+8 - 15 + speed master 1 + lern (shift button)
 
 
 
@@ -107,7 +107,7 @@ Executors ( wing 1 - 2 x 5 view)
 
 faders
 
-16 - 23
+16 - 23 + grand master fader
 
 
 -------------------------------
