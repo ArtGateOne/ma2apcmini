@@ -1,0 +1,22 @@
+{
+  "name": "ma2apcmini",
+  "version": "1.0.0",
+  "description": "none",
+  "main": "ma2apcmini.js",
+  "scripts": {
+    "test": "none"
+  },
+  "repository": {
+    "type": "git",
+    "url": "none"
+  },
+  "keywords": [
+    "none"
+  ],
+  "author": "ArtGateOne",
+  "license": "ISC",
+  "dependencies": {
+    "easymidi": "^2.0.4",
+    "websocket": "^1.0.34"
+  }
+}
