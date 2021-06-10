@@ -1,4 +1,4 @@
-//ma2apcmini by ArtGateOne beta 2 
+//ma2apcmini by ArtGateOne beta 3 
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -13,13 +13,12 @@ midi_out = 'APC MINI 1';    //set correct midi out device name
 
 
 //global variables
+var blackout = 0;
 var pageIndex = 0;  //button page
 var pageIndex2 = 0; //fader page
 var request = 0;
 var session = 0;
-//var exec = JSON.parse('{"index":[[0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,21,20,19,18,17,16,15,14,66]]}');
 var ledmatrix = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 5, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-//var ledmatrix = [0];
 var faderValue = [0, 0, 0, 0, 0.002, 0.006, 0.01, 0.014, 0.018, 0.022, 0.026, 0.03, 0.034, 0.038, 0.042, 0.046, 0.05, 0.053, 0.057, 0.061, 0.065, 0.069, 0.073, 0.077, 0.081, 0.085, 0.089, 0.093, 0.097, 0.1, 0.104, 0.108, 0.112, 0.116, 0.12, 0.124, 0.128, 0.132, 0.136, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.3, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.4, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48, 0.49, 0.5, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.6, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67, 0.68, 0.69, 0.7, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.8, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1, 1, 1];
 var faderValueMem = [0, 0, 0];
 var faderTime = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -86,7 +85,7 @@ function midiclear() {
 
 
 //clear terminal
-console.log('\033[2J');
+//console.log('\033[2J');
 
 //display info
 console.log("Akai APC mini MA2 WING " + wing);
@@ -169,13 +168,16 @@ input.on('noteon', function (msg) {
 
 
     if (msg.note == 98) {//Shift Button
-        if (wing == 1) {
-            client.send('{"command":"SpecialMaster 2.1 At 0","session":' + session + ',"requestType":"command","maxRequests":0}');
-        } else if (wing == 2){
+        if (wing == 1 || wing == 3) {
+            if (blackout == 0) {
+                client.send('{"command":"SpecialMaster 2.1 At 0","session":' + session + ',"requestType":"command","maxRequests":0}');
+                blackout = 1;
+            } else if (blackout == 1) {
+                client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
+                blackout = 0;
+            }
+        } else if (wing == 2) {
             client.send('{"command":"Learn SpecialMaster 3.1","session":' + session + ',"requestType":"command","maxRequests":0}');
-        }
-        else if (wing == 3){
-            client.send('{"command":"SpecialMaster 2.1 At 0","session":' + session + ',"requestType":"command","maxRequests":0}');
         }
     }
 
@@ -202,18 +204,6 @@ input.on('noteoff', function (msg) {
     if (msg.note >= 64 && msg.note <= 71) {
         client.send('{"requestType":"playbacks_userInput","cmdline":"","execIndex":' + buttons[msg.note - 64] + ',"pageIndex":' + pageIndex2 + ',"buttonId":0,"pressed":false,"released":true,"type":0,"session":' + session + ',"maxRequests":0}');
     }
-
-    if (msg.note == 98) {//Shift Button
-        if (wing == 1) {
-            client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
-        }
-        else if (wing == 2) {
-            //client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
-        }
-        else if (wing == 3) {
-            client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
-        }
-    }
 });
 
 input.on('cc', function (msg) {
@@ -225,9 +215,10 @@ input.on('cc', function (msg) {
         faderValueMem[msg.controller] = faderValue[msg.value];
 
         if (msg.controller == 56) {
-            if (wing == 1) { client.send('{"command":"SpecialMaster 2.1 At ' + (faderValue[msg.value] * 100) + '","session":' + session + ',"requestType":"command","maxRequests":0}'); }
+            if (wing == 1 || wing == 3) {
+                if (blackout == 0) { client.send('{"command":"SpecialMaster 2.1 At ' + (faderValue[msg.value] * 100) + '","session":' + session + ',"requestType":"command","maxRequests":0}'); }
+            }
             else if (wing == 2) { client.send('{"command":"SpecialMaster 3.1 At ' + (faderValue[msg.value] * 225) + '","session":' + session + ',"requestType":"command","maxRequests":0}'); }
-            else if (wing == 3) { client.send('{"command":"SpecialMaster 2.1 At ' + (faderValue[msg.value] * 100) + '","session":' + session + ',"requestType":"command","maxRequests":0}'); }
         } else {
             client.send('{"requestType":"playbacks_userInput","execIndex":' + buttons[msg.controller - 48] + ',"pageIndex":' + pageIndex2 + ',"faderValue":' + faderValue[msg.value] + ',"type":1,"session":' + session + ',"maxRequests":0}');
         }
@@ -245,15 +236,6 @@ client.onerror = function () {
 
 client.onopen = function () {
     console.log('WebSocket Client Connected');
-
-    /*function sendNumber() {
-        if (client.readyState === client.OPEN) {
-            var number = Math.round(Math.random() * 0xFFFFFF);
-            client.send(number.toString());
-            setTimeout(sendNumber, 1000);
-        }
-    }
-    sendNumber();*/
 };
 
 client.onclose = function () {
@@ -270,7 +252,7 @@ client.onclose = function () {
 client.onmessage = function (e) {
 
     request = request + 1;
-    //console.log(request);
+
     if (request >= 9) {
         client.send('{"session":' + session + '}');
         client.send('{"requestType":"getdata","data":"set,clear,solo,high","session":' + session + ',"maxRequests":1}');
@@ -278,11 +260,8 @@ client.onmessage = function (e) {
     }
 
     if (typeof e.data === 'string') {
-        //console.log("Received: '" + e.data + "'");
-        //console.log(e.data);
 
         obj = JSON.parse(e.data);
-        //console.log(obj);
 
         if (obj.status == "server ready") {
             console.log("SERVER READY");
@@ -317,7 +296,7 @@ client.onmessage = function (e) {
         }
 
         if (obj.responseType == "login" && obj.result == true) {
-            setInterval(interval, 100);//80
+            setInterval(interval, 100);
             console.log("...LOGGED");
             console.log("SESSION " + session);
         }
@@ -350,7 +329,7 @@ client.onmessage = function (e) {
                         for (i = 0; i < 5; i++) {
                             var m = 3;
                             if (obj.itemGroups[0].items[l][i].isRun == 1) {
-                                m = 1;
+                                m = 1 + blackout;
                             } else if ((obj.itemGroups[0].items[l][i].i.c) == "#000000") {
                                 m = 0
                             } else {
@@ -367,7 +346,7 @@ client.onmessage = function (e) {
                         for (i = 0; i < 3; i++) {
                             var m = 3;
                             if (obj.itemGroups[0].items[l][i].isRun == 1) {
-                                m = 1;
+                                m = 1 + blackout;
                             } else if ((obj.itemGroups[0].items[l][i].i.c) == "#000000") {
                                 m = 0
                             } else {
@@ -391,7 +370,7 @@ client.onmessage = function (e) {
                         for (i = 2; i < 5; i++) {
                             var m = 3;
                             if (obj.itemGroups[0].items[l][i].isRun == 1) {
-                                m = 1;
+                                m = 1 + blackout;
                             } else if ((obj.itemGroups[0].items[l][i].i.c) == "#000000") {
                                 m = 0
                             } else {
@@ -408,7 +387,7 @@ client.onmessage = function (e) {
                         for (i = 0; i < 5; i++) {
                             var m = 3;
                             if (obj.itemGroups[0].items[l][i].isRun == 1) {
-                                m = 1;
+                                m = 1 + blackout;
                             } else if ((obj.itemGroups[0].items[l][i].i.c) == "#000000") {
                                 m = 0
                             } else {
@@ -433,7 +412,7 @@ client.onmessage = function (e) {
                         for (i = 0; i < 5; i++) {
                             var m = 3;
                             if (obj.itemGroups[0].items[l][i].isRun == 1) {
-                                m = 1;
+                                m = 1 + blackout;
                             } else if ((obj.itemGroups[0].items[l][i].i.c) == "#000000") {
                                 m = 0
                             } else {
@@ -450,7 +429,7 @@ client.onmessage = function (e) {
                         for (i = 0; i < 3; i++) {
                             var m = 3;
                             if (obj.itemGroups[0].items[l][i].isRun == 1) {
-                                m = 1;
+                                m = 1 + blackout;
                             } else if ((obj.itemGroups[0].items[l][i].i.c) == "#000000") {
                                 m = 0
                             } else {
@@ -487,7 +466,7 @@ client.onmessage = function (e) {
                         }
 
                         if (obj.itemGroups[0].items[0][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j] != m) {
@@ -497,7 +476,7 @@ client.onmessage = function (e) {
 
                         m = 0;
                         if (obj.itemGroups[0].items[0][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j + 64] != m) {
@@ -520,7 +499,7 @@ client.onmessage = function (e) {
                         }
 
                         if (obj.itemGroups[0].items[1][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j] != m) {
@@ -530,7 +509,7 @@ client.onmessage = function (e) {
 
                         m = 0;
                         if (obj.itemGroups[0].items[1][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j + 64] != m) {
@@ -556,7 +535,7 @@ client.onmessage = function (e) {
                         }
 
                         if (obj.itemGroups[0].items[1][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j] != m) {
@@ -566,7 +545,7 @@ client.onmessage = function (e) {
 
                         m = 0;
                         if (obj.itemGroups[0].items[1][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j + 64] != m) {
@@ -589,7 +568,7 @@ client.onmessage = function (e) {
                         }
 
                         if (obj.itemGroups[0].items[2][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j] != m) {
@@ -599,7 +578,7 @@ client.onmessage = function (e) {
 
                         m = 0;
                         if (obj.itemGroups[0].items[2][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j + 64] != m) {
@@ -625,7 +604,7 @@ client.onmessage = function (e) {
                         }
 
                         if (obj.itemGroups[0].items[0][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j] != m) {
@@ -635,7 +614,7 @@ client.onmessage = function (e) {
 
                         m = 0;
                         if (obj.itemGroups[0].items[0][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j + 64] != m) {
@@ -658,7 +637,7 @@ client.onmessage = function (e) {
                         }
 
                         if (obj.itemGroups[0].items[1][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j] != m) {
@@ -668,7 +647,7 @@ client.onmessage = function (e) {
 
                         m = 0;
                         if (obj.itemGroups[0].items[1][i].isRun) {
-                            m = 1
+                            m = 1 + blackout;
                         }
 
                         if (ledmatrix[j + 64] != m) {
