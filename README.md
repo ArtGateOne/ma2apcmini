@@ -7,6 +7,7 @@ HOW TO!
 
 
 Download and install NodeJS version 14.17 from https://nodejs.org/dist/v14.17.0/node-v14.17.0-x64.msi
+or nodejs version 16.14 https://nodejs.org/dist/v16.14.0/node-v16.14.0-x64.msi
 
 Download my code archive & unrar to c: (or where U want)
 
