@@ -155,5 +155,11 @@ last 4 buttons & last fader - not programed
 ---------
 
 
+If you get undefined 1 error (onPC version does not support this functionality)
+
+
+This code will not work with the older PC version of GrandMA2 (like 3.1.2.5) because this version does not have webremote control,
+
+
 U can use this code to control show only - not for programming
 
