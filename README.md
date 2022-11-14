@@ -163,3 +163,9 @@ This code will not work with the older PC version of GrandMA2 (like 3.1.2.5) bec
 
 U can use this code to control show only - not for programming
 
+------------------------
+
+
+!!! Program not work with old ma2onpc
+
+!! Program not work - if any executor have more then 1 row ! (thx Philipp Darpe)
