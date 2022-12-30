@@ -22,6 +22,8 @@ Start my code from command prompt CMD (WIN + R)
 
 node ma2apcmini.js
 
+or node ma2apcminimk2.js if u have mk2 model
+
 
 ---------------------------------
 
@@ -43,6 +45,9 @@ page = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec butto
 midi_in = 'APC MINI 0';     //set correct midi in device name
 
 midi_out = 'APC MINI 1';    //set correct midi out device name 
+
+
+in mk2 version u can select led brightness and new color mode
 
 
 --------------------------------
