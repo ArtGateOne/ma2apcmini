@@ -15,14 +15,15 @@ Start grandMA2
 
 Add user "apcmini" - password "remote"
 
-Tunr on web remote.
-
+Tunr on web remote. (remotes - login enabled)
 
 Start my code from command prompt CMD (WIN + R) 
 
 node ma2apcmini.js
 
-or node ma2apcminimk2.js if u have mk2 model
+or if u have mk2 model
+
+node ma2apcminimk2.js
 
 
 ---------------------------------
