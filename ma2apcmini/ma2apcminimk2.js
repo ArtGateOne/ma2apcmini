@@ -264,7 +264,7 @@ client.onopen = function () {
 
 client.onclose = function () {
     console.log('Client Closed');
-    for (i = 0; i < 90; i++) {
+    for (i = 0; i < 119; i++) {
         output.send('noteon', { note: i, velocity: 0, channel: 0 });
         sleep(10, function () { });
     }
