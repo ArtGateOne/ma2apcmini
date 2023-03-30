@@ -1,5 +1,7 @@
 # ma2apcmini
-Nodejs code program - to control grandMA2 via web remote - use Akai APC mini midi controller - free - led feedback
+Nodejs code program - to control grandMA2 via web remote
+
+use Akai APC mini midi controller or Akai APC mini mk2 - free - led feedback
 
 
 
@@ -15,12 +17,15 @@ Start grandMA2
 
 Add user "apcmini" - password "remote"
 
-Tunr on web remote.
-
+Tunr on web remote. (remotes - login enabled)
 
 Start my code from command prompt CMD (WIN + R) 
 
 node ma2apcmini.js
+
+or if u have mk2 model
+
+node ma2apcminimk2.js
 
 
 ---------------------------------
@@ -43,6 +48,9 @@ page = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec butto
 midi_in = 'APC MINI 0';     //set correct midi in device name
 
 midi_out = 'APC MINI 1';    //set correct midi out device name 
+
+
+in mk2 version u can select led brightness and new color mode
 
 
 --------------------------------
