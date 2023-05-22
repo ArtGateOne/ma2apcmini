@@ -1,4 +1,4 @@
-//ma2apcmini mk2 by ArtGateOne 
+//ma2apcmini mk2 v 1.3 by ArtGateOne 
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -8,8 +8,8 @@ var client = new W3CWebSocket('ws://localhost:80/'); //U can change localhost(12
 //config 
 wing = 1;   //set wing 1, 2 or 3
 page = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
-midi_in = 'APC mini mk2 0';     //set correct midi in device name
-midi_out = 'APC mini mk2 1';    //set correct midi out device name
+midi_in = 'APC mini mk2';     //set correct midi in device name
+midi_out = 'APC mini mk2';    //set correct midi out device name
 brightness = 6;     //led brightness 0-6
 darkmode = 0;   //new color mode 1 - ON , 0 - OFF
 
