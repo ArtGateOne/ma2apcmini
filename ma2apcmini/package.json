@@ -16,7 +16,7 @@
   "author": "ArtGateOne",
   "license": "ISC",
   "dependencies": {
-    "easymidi": "^3.0.1",
+    "easymidi": "^3.1.0",
     "websocket": "^1.0.34"
   }
 }
