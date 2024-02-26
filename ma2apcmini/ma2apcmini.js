@@ -1,4 +1,4 @@
-//ma2apcmini v 1.3.5 by ArtGateOne  
+//ma2apcmini v 1.3.6 by ArtGateOne  
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -7,7 +7,7 @@ var client = new W3CWebSocket('ws://localhost:80/'); //U can change localhost(12
 
 //config 
 wing = 1;   //set wing 1, 2 or 3
-page = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
+pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
 midi_in = 'APC MINI';     //set correct midi in device name
 midi_out = 'APC MINI';    //set correct midi out device name
 
@@ -120,7 +120,7 @@ for (i = 0; i < 90; i++) {
 
 
 //turn on page select buttons
-if (page > 0) {
+if (pageselect > 0) {
     output.send('noteon', { note: 82, velocity: 1, channel: 0 });
     output.send('noteon', { note: 83, velocity: 0, channel: 0 });
     output.send('noteon', { note: 84, velocity: 0, channel: 0 });
@@ -152,12 +152,12 @@ input.on('noteon', function (msg) {
     }
 
     if (msg.note >= 82 && msg.note <= 86) {
-        if (page == 1) {
+        if (pageselect == 1) {
             output.send('noteon', { note: (pageIndex + 82), velocity: 0, channel: 0 });
             pageIndex = msg.note - 82;
             output.send('noteon', { note: (msg.note), velocity: 1, channel: 0 });
         }
-        if (page == 2) {
+        if (pageselect == 2) {
             output.send('noteon', { note: (pageIndex + 82), velocity: 0, channel: 0 });
             pageIndex = msg.note - 82;
             pageIndex2 = msg.note - 82;

@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 1.4.0 by ArtGateOne 
+//ma2apcmini mk2 v 1.4.1 by ArtGateOne 
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -7,7 +7,7 @@ var client = new W3CWebSocket('ws://localhost:80/'); //U can change localhost(12
 
 //config 
 wing = 1;   //set wing 1, 2 or 3
-page = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
+pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
 midi_in = 'APC mini mk2';     //set correct midi in device name
 midi_out = 'APC mini mk2';    //set correct midi out device name
 brightness = 5;     //led brightness 0-6
@@ -149,12 +149,15 @@ for (i = 0; i < 90; i++) {
 
 
 //turn on page select buttons
-if (page > 0) {
+if (pageselect > 0) {
     output.send('noteon', { note: 112, velocity: 127, channel: 0 });
     output.send('noteon', { note: 113, velocity: 0, channel: 0 });
     output.send('noteon', { note: 114, velocity: 0, channel: 0 });
     output.send('noteon', { note: 115, velocity: 0, channel: 0 });
     output.send('noteon', { note: 116, velocity: 0, channel: 0 });
+    output.send('noteon', { note: 117, velocity: 0, channel: 0 });
+    output.send('noteon', { note: 118, velocity: 0, channel: 0 });
+    output.send('noteon', { note: 119, velocity: 0, channel: 0 });
 }
 
 
@@ -180,13 +183,13 @@ input.on('noteon', function (msg) {
         client.send('{"requestType":"playbacks_userInput","cmdline":"","execIndex":' + buttons[msg.note - 100] + ',"pageIndex":' + pageIndex2 + ',"buttonId":0,"pressed":true,"released":false,"type":0,"session":' + session + ',"maxRequests":0}');
     }
 
-    if (msg.note >= 112 && msg.note <= 116) {//page select
-        if (page == 1) {
+    if (msg.note >= 112 && msg.note <= 119) {//page select
+        if (pageselect == 1) {
             output.send('noteon', { note: (pageIndex + 112), velocity: 0, channel: 0 });
             pageIndex = msg.note - 112;
             output.send('noteon', { note: (msg.note), velocity: 127, channel: 0 });
         }
-        if (page == 2) {
+        if (pageselect == 2) {
             output.send('noteon', { note: (pageIndex + 112), velocity: 0, channel: 0 });
             pageIndex = msg.note - 112;
             pageIndex2 = msg.note - 112;
