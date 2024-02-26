@@ -43,7 +43,7 @@ find this lines
 
 wing = 1;   //set wing 1, 2 or 3 mode
 
-page = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
+pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
 
 midi_in = 'APC MINI 0';     //set correct midi in device name
 
@@ -152,10 +152,10 @@ Color Green if run
 
 SCENE LAUCH BUTTONS ON RIGHT SIDE
 
-Select PAGE 1-5
+Select PAGE 1-8
 
 
-last 4 buttons & last fader - not programed
+last fader - Grand Master
 
 
 
