@@ -82,15 +82,15 @@ function sleep(time, callback) {
 function interval() {
     if (session > 0) {
         if (wing == 1) {
-            client.send('{"requestType":"playbacks","startIndex":[100],"itemsCount":[90],"pageIndex":' + pageIndex + ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}')
+            client.send('{"requestType":"playbacks","startIndex":[100],"itemsCount":[90],"pageIndex":' + pageIndex + ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}');
             client.send('{"requestType":"playbacks","startIndex":[0],"itemsCount":[10],"pageIndex":' + pageIndex2 + ',"itemsType":[2],"view":2,"execButtonViewMode":1,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}');
         }
         else if (wing == 2) {
-            client.send('{"requestType":"playbacks","startIndex":[100],"itemsCount":[90],"pageIndex":' + pageIndex + ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}')
+            client.send('{"requestType":"playbacks","startIndex":[100],"itemsCount":[90],"pageIndex":' + pageIndex + ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}');
             client.send('{"requestType":"playbacks","startIndex":[0],"itemsCount":[15],"pageIndex":' + pageIndex2 + ',"itemsType":[2],"view":2,"execButtonViewMode":1,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}');
         }
         else if (wing == 3) {
-            client.send('{"requestType":"playbacks","startIndex":[130],"itemsCount":[60],"pageIndex":' + pageIndex + ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}')
+            client.send('{"requestType":"playbacks","startIndex":[130],"itemsCount":[60],"pageIndex":' + pageIndex + ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}');
             client.send('{"requestType":"playbacks","startIndex":[15],"itemsCount":[10],"pageIndex":' + pageIndex2 + ',"itemsType":[2],"view":2,"execButtonViewMode":1,"buttonsViewMode":0,"session":' + session + ',"maxRequests":1}');
 
         }
