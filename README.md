@@ -19,13 +19,13 @@ Add user "apcmini" - password "remote"
 
 Tunr on web remote. (remotes - login enabled)
 
-Start my code from command prompt CMD (WIN + R) 
+Set node.exe as default tool to open .js file
 
-node ma2apcmini.js
+double click on icon  ma2apcmini.js (for apc mini)
 
 or if u have mk2 model
 
-node ma2apcminimk2.js
+ ma2apcminimk2.js
 
 
 ---------------------------------
@@ -45,12 +45,22 @@ wing = 1;   //set wing 1, 2 or 3 mode
 
 pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
 
-midi_in = 'APC MINI 0';     //set correct midi in device name
+midi_in = 'APC MINI';     //set correct midi in device name
 
-midi_out = 'APC MINI 1';    //set correct midi out device name 
+midi_out = 'APC MINI';    //set correct midi out device name 
 
 
-in mk2 version u can select led brightness and new color mode
+mk2 version and mk2 color
+
+//config 
+wing = 1;   //set wing 1 or 2 (or 3)
+pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
+midi_in = 'APC mini mk2';     //set correct midi in device name
+midi_out = 'APC mini mk2';    //set correct midi out device name
+brightness = 6;     //led brightness 0-6
+darkmode = 0;   //new color mode 1 - ON , 0 - OFF
+autocolor = 1;  //Executors color from apperance - 0 = off, 1 = ON
+blink = 0;      //no color Executor blink 1=on, 0=off 
 
 
 --------------------------------
