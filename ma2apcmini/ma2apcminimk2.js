@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 1.4.1 by ArtGateOne 
+//ma2apcmini mk2 v 1.5.1 by ArtGateOne 
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -7,7 +7,7 @@ var client = new W3CWebSocket('ws://localhost:80/'); //U can change localhost(12
 
 //config 
 wing = 1;   //set wing 1, 2 or 3
-pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
+pageselect = 2;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
 midi_in = 'APC mini mk2';     //set correct midi in device name
 midi_out = 'APC mini mk2';    //set correct midi out device name
 brightness = 5;     //led brightness 0-6
@@ -202,13 +202,8 @@ input.on('noteon', function (msg) {
 
     if (msg.note == 122) {//Shift Button
         if (wing == 1 || wing == 3) {
-            if (blackout == 0) {
                 client.send('{"command":"SpecialMaster 2.1 At 0","session":' + session + ',"requestType":"command","maxRequests":0}');
                 blackout = 1;
-            } else if (blackout == 1) {
-                client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
-                blackout = 0;
-            }
         } else if (wing == 2) {
             client.send('{"command":"Learn SpecialMaster 3.1","session":' + session + ',"requestType":"command","maxRequests":0}');
         }
@@ -236,6 +231,12 @@ input.on('noteoff', function (msg) {
 
     if (msg.note >= 100 && msg.note <= 107) {
         client.send('{"requestType":"playbacks_userInput","cmdline":"","execIndex":' + buttons[msg.note - 100] + ',"pageIndex":' + pageIndex2 + ',"buttonId":0,"pressed":false,"released":true,"type":0,"session":' + session + ',"maxRequests":0}');
+    }
+    if (msg.note == 122) {//Shift Button
+        if (wing == 1 || wing == 3) {
+            client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
+            blackout = 0;
+        }
     }
 });
 

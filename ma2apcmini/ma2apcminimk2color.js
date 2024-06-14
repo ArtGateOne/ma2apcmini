@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 1.5.0 color - by ArtGateOne 
+//ma2apcmini mk2 v 1.5.1 color - by ArtGateOne 
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -202,13 +202,8 @@ input.on('noteon', function (msg) {
 
     if (msg.note == 122) {//Shift Button
         if (wing == 1 || wing == 3) {
-            if (blackout == 0) {
-                client.send('{"command":"SpecialMaster 2.1 At 0","session":' + session + ',"requestType":"command","maxRequests":0}');
-                blackout = 1;
-            } else if (blackout == 1) {
-                client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
-                blackout = 0;
-            }
+            client.send('{"command":"SpecialMaster 2.1 At 0","session":' + session + ',"requestType":"command","maxRequests":0}');
+            blackout = 1;
         } else if (wing == 2) {
             client.send('{"command":"Learn SpecialMaster 3.1","session":' + session + ',"requestType":"command","maxRequests":0}');
         }
@@ -236,6 +231,13 @@ input.on('noteoff', function (msg) {
 
     if (msg.note >= 100 && msg.note <= 107) {
         client.send('{"requestType":"playbacks_userInput","cmdline":"","execIndex":' + buttons[msg.note - 100] + ',"pageIndex":' + pageIndex2 + ',"buttonId":0,"pressed":false,"released":true,"type":0,"session":' + session + ',"maxRequests":0}');
+    }
+
+    if (msg.note == 122) {//Shift Button
+        if (wing == 1 || wing == 3) {
+            client.send('{"command":"SpecialMaster 2.1 At ' + faderValueMem[56] * 100 + '","session":' + session + ',"requestType":"command","maxRequests":0}');
+            blackout = 0;
+        }
     }
 });
 
@@ -502,45 +504,6 @@ function led_feedback(i, j, l) {
     }
     return;
 }
-
-
-function check_color(color) {
-
-    if (color == "#FFFFFF") {//white
-        m = 3;
-    } else if (color == "#FF0000") {//red
-        m = 5;//red
-    } else if (color == "#FF7F00") {//orange
-        m = 9;//orange
-    } else if (color == "#FFFF00") {//yellow
-        m = 13;
-    } else if (color == "#7FFF00") {//fern green
-        m = 17;
-    } else if (color == "#00FF00") {//green
-        m = 21;
-    } else if (color == "#00FF7F") {//sea green
-        m = 29;
-    } else if (color == "#00FFFF") {//cyan
-        m = 37;
-    } else if (color == "#007FFF") {//lavender
-        m = 41;
-    } else if (color == "#0000FF") {//blue
-        m = 45;//blue
-    } else if (color == "#7F00FF") {//violet
-        m = 49;
-    } else if (color == "#FF00FF") {//magenta
-        m = 53;
-    } else if (color == "#FF007F") {//pink
-        m = 57;
-    } else {
-        if (blink == 0) {
-            channel = brightness;
-        }
-    }
-
-    return;
-}
-
 
 // Mapa kolorów do velocity
 const colorToVelocity = {
