@@ -19,13 +19,13 @@ Add user "apcmini" - password "remote"
 
 Tunr on web remote. (remotes - login enabled)
 
-Start my code from command prompt CMD (WIN + R) 
+Set node.exe as default tool to open .js file
 
-node ma2apcmini.js
+double click on icon  ma2apcmini.js (for apc mini)
 
 or if u have mk2 model
 
-node ma2apcminimk2.js
+ ma2apcminimk2.js
 
 
 ---------------------------------
