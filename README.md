@@ -186,3 +186,13 @@ U can use this code to control show only - not for programming
 !!! Program not work with old ma2onpc
 
 !! Program not work - if any executor have more then 1 row ! (thx Philipp Darpe)
+
+
+--------------------
+
+Tips
+
+Turn off autofix option for Action Buttons - use command
+
+Assign Executor 101 Thru 190 /Autofix = "Off"
+
