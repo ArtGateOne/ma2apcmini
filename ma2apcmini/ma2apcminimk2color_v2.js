@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 1.5.2 color - by ArtGateOne 
+//ma2apcmini mk2 v 1.5.3 color - by ArtGateOne 
 var easymidi = require('easymidi');
 var W3CWebSocket = require('websocket')
     .w3cwebsocket;
@@ -276,8 +276,6 @@ client.onclose = function () {
 
 client.onmessage = function (e) {
 
-    request = request + 1;
-
     if (request >= 9) {
         client.send('{"session":' + session + '}');
         client.send('{"requestType":"getdata","data":"set,clear,solo,high","session":' + session + ',"maxRequests":1}');
@@ -347,6 +345,8 @@ client.onmessage = function (e) {
         }
 
         if (obj.responseType == "playbacks") {
+
+            request = request + 1;
 
             if (obj.responseSubType == 3) {//Button LED
                 if (wing == 1) {
