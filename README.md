@@ -185,7 +185,21 @@ U can use this code to control show only - not for programming
 
 !!! Program not work with old ma2onpc
 
-!! Program not work - if any executor have more then 1 row ! (thx Philipp Darpe)
+!! Program not work - if any executor have more then 1 row ! (thx Philipp Darpe) (only old vesrion and v2)
+
+! Only v3 version can work with 1-5 row executors ! (add 4.3.2025)
+V3 add control page command
+
+//config
+wing = 1; //set wing 1 or 2
+pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
+control_onpc_page = 1; // change pages onpc 0=off, 1=on
+midi_in = "APC mini mk2"; //set correct midi in device name
+midi_out = "APC mini mk2"; //set correct midi out device name
+brightness = 6; //led brightness 0-6
+darkmode = 0; //new color mode 1 - ON , 0 - OFF
+autocolor = 1; //Executors color from apperance - 0 = off, 1 = ON
+blink = 0; //no color Executor blink 1=on, 0=off
 
 
 --------------------
