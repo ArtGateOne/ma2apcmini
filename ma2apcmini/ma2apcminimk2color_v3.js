@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 1.7.7 color v3 - by ArtGateOne
+//ma2apcmini mk2 v 1.7.8 color v3 - by ArtGateOne
 var easymidi = require("easymidi");
 var W3CWebSocket = require("websocket").w3cwebsocket;
 var client = new W3CWebSocket("ws://localhost:80/"); //U can change localhost(127.0.0.1) to Your console IP address
@@ -9,10 +9,10 @@ pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec but
 control_onpc_page = 1; // change pages onpc 0=off, 1=on
 midi_in = "APC mini mk2"; //set correct midi in device name
 midi_out = "APC mini mk2"; //set correct midi out device name
-brightness = 6; //led brightness 0-6
-darkmode = 0; //new color mode 1 - ON , 0 - OFF
+brightness = 6; //led brightness 0-6 (work in autocolor = 0)
+darkmode = 1; //new color mode 1 - ON , 0 - OFF (work in autocolor = 0)
 autocolor = 1; //Executors color from apperance - 0 = off, 1 = ON
-blink = 0; //no color Executor blink 1=on, 0=off
+blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 
 //global variables
 var c1 = 0; //Color executor empty
@@ -881,19 +881,17 @@ function led_feedback(i, j, l) {
     }
   } else {
     m = c1;
+    channel = brightness;
     if (obj.itemGroups[0].items[l][i].isRun == 1) {
       m = c3;
+      if (blink == 1) {
+        channel = 9;
+      }
     } else if (obj.itemGroups[0].items[l][i].bdC == "#3D3D3D") {
       m = c1;
     } else {
       m = c2;
     }
-    if (blink == 0) {
-      channel = brightness;
-    } else if (blink == 1) {
-      channel = 9;
-    }
-
     if (ledmatrix[j] != m) {
       ledmatrix[j] = m;
       output.send("noteon", { note: j, velocity: m, channel: channel });
