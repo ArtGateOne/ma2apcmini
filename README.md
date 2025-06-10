@@ -194,7 +194,7 @@ V3 add control page command
 
 //config
 
-wing = 1; //set wing 1 or 2
+wing = 1; //set wing 1 2 or 3
 
 pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
 
@@ -211,6 +211,17 @@ darkmode = 0; //new color mode 1 - ON , 0 - OFF
 autocolor = 1; //Executors color from apperance - 0 = off, 1 = ON
 
 blink = 0; //no color Executor blink 1=on, 0=off
+
+
+v.1.7.x
+When the code starts, the Akai displays the active mode in a graphical form.
+Color v3 code received the wing=3 mode in a slightly modified form.
+In this mode, all faders 1–9 are supported.
+
+The buttons above them control the executor assigned to each fader (the last fader acts as a shift button and does not have LED feedback).
+
+The entire 8x8 executor panel handles action buttons in a 2-row by 5-button view,
+which provides full utilization of the MIDI controller with these buttons.
 
 
 --------------------
