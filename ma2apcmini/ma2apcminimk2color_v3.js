@@ -10,7 +10,7 @@ control_onpc_page = 1; // change pages onpc 0=off, 1=on
 midi_in = "APC mini mk2"; //set correct midi in device name
 midi_out = "APC mini mk2"; //set correct midi out device name
 brightness = 6; //led brightness 0-6 (work in autocolor = 0)
-darkmode = 1; //new color mode 1 - ON , 0 - OFF (work in autocolor = 0)
+darkmode = 0; //new color mode 1 - ON , 0 - OFF (work in autocolor = 0)
 autocolor = 1; //Executors color from apperance - 0 = off, 1 = ON
 blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 
