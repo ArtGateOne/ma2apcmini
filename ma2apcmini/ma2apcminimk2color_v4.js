@@ -482,16 +482,593 @@ log(LOG_LEVELS.DEBUG, easymidi.getOutputs());
 
 log(LOG_LEVELS.INFO, `🎹 Connecting to MIDI device ${MIDI_IN_DEVICE}`);
 
-// Open midi device with error handling
-try {
-  input = new easymidi.Input(MIDI_IN_DEVICE);
-  output = new easymidi.Output(MIDI_OUT_DEVICE);
-  log(LOG_LEVELS.INFO, "🎹 MIDI devices connected successfully");
-} catch (error) {
-  log(LOG_LEVELS.ERROR, "🎹 Failed to connect to MIDI devices", error);
-  log(LOG_LEVELS.ERROR, "🎹 Please check that the APC mini mk2 is connected and the device name is correct");
-  process.exit(1);
+// MIDI device state management
+let midiDeviceState = {
+  isConnected: false,
+  lastError: null,
+  reconnectAttempts: 0,
+  maxReconnectAttempts: 5,
+  reconnectDelay: 2000,
+  healthCheckInterval: null,
+  isReconnecting: false,
+  retryTimeout: null,
+};
+
+// Enhanced MIDI device initialization with retry logic
+async function initializeMidiDevices() {
+  try {
+    // Close any existing connections first
+    if (input && typeof input.close === 'function') {
+      try {
+        input.close();
+      } catch (error) {
+        log(LOG_LEVELS.WARN, "⚠️ Error closing existing MIDI input:", error.message);
+      }
+    }
+    if (output && typeof output.close === 'function') {
+      try {
+        output.close();
+      } catch (error) {
+        log(LOG_LEVELS.WARN, "⚠️ Error closing existing MIDI output:", error.message);
+      }
+    }
+    
+    // Clear the old references
+    input = null;
+    output = null;
+    
+    // Small delay to ensure old connections are fully released
+    // This is especially important on Windows where MIDI port handling can be finicky
+    if (midiDeviceState.isReconnecting) {
+      // Only add delay for reconnections, not initial startup
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Create new connections
+    input = new easymidi.Input(MIDI_IN_DEVICE);
+    output = new easymidi.Output(MIDI_OUT_DEVICE);
+    midiDeviceState.isConnected = true;
+    midiDeviceState.lastError = null;
+    midiDeviceState.reconnectAttempts = 0;
+    
+    // Clear any pending retry timeouts
+    if (midiDeviceState.retryTimeout) {
+      clearTimeout(midiDeviceState.retryTimeout);
+      midiDeviceState.retryTimeout = null;
+    }
+    
+    log(LOG_LEVELS.INFO, "🎹 MIDI devices connected successfully");
+    
+    // Start MIDI device health monitoring
+    startMidiHealthMonitoring();
+    
+    // If this was a reconnection (not initial startup), refresh LED states
+    if (midiDeviceState.isReconnecting) {
+      log(LOG_LEVELS.INFO, "🔄 Reconnection detected, refreshing LED states...");
+      setTimeout(() => {
+        setupMidiEventListeners();
+        refreshLedStates();
+      }, 100);
+      // Reset reconnecting flag
+      midiDeviceState.isReconnecting = false;
+    }
+    
+    return true;
+  } catch (error) {
+    midiDeviceState.lastError = error;
+    midiDeviceState.isConnected = false;
+    log(LOG_LEVELS.ERROR, "🎹 Failed to connect to MIDI devices", error);
+    
+    if (midiDeviceState.reconnectAttempts < midiDeviceState.maxReconnectAttempts) {
+      log(LOG_LEVELS.WARN, `🔄 Retrying MIDI connection in ${midiDeviceState.reconnectDelay}ms (attempt ${midiDeviceState.reconnectAttempts + 1}/${midiDeviceState.maxReconnectAttempts})`);
+      midiDeviceState.reconnectAttempts++;
+      midiDeviceState.retryTimeout = setTimeout(() => initializeMidiDevices(), midiDeviceState.reconnectDelay);
+      return false;
+    } else {
+      log(LOG_LEVELS.ERROR, "🛑 Max MIDI reconnection attempts reached. Please check device connection.");
+      log(LOG_LEVELS.ERROR, "🎹 Available MIDI devices:", easymidi.getInputs());
+      process.exit(1);
+    }
+  }
 }
+
+// MIDI device health monitoring function
+function startMidiHealthMonitoring() {
+  // Clear existing interval if any
+  if (midiDeviceState.healthCheckInterval) {
+    clearInterval(midiDeviceState.healthCheckInterval);
+  }
+  
+  // Check MIDI device health every 5 seconds
+  midiDeviceState.healthCheckInterval = setInterval(() => {
+    checkMidiDeviceHealth();
+  }, 5000);
+}
+
+// Check if MIDI devices are still responsive
+function checkMidiDeviceHealth() {
+  try {
+    // Test if devices are still accessible
+    const inputs = easymidi.getInputs();
+    const outputs = easymidi.getOutputs();
+    
+    // Check for exact match first, then try partial matches
+    const inputExists = inputs.includes(MIDI_IN_DEVICE) || 
+                       inputs.some(input => input.includes('APC') || input.includes('APC mini'));
+    const outputExists = outputs.includes(MIDI_OUT_DEVICE) || 
+                        outputs.some(output => output.includes('APC') || output.includes('APC mini'));
+    
+    if (!inputExists || !outputExists) {
+      log(LOG_LEVELS.WARN, "⚠️ MIDI device not found in available devices");
+      log(LOG_LEVELS.WARN, "🎹 Available inputs:", inputs);
+      log(LOG_LEVELS.WARN, "🎹 Available outputs:", outputs);
+      
+      // Mark as disconnected and try to reconnect
+      midiDeviceState.isConnected = false;
+      reconnectMidiDevices();
+      return;
+    }
+    
+    // Test if we can still send a message (this will throw if device is disconnected)
+    if (output && typeof output.send === 'function') {
+      // Send a silent note to test connection (note 0, velocity 0)
+      output.send("noteon", { note: 0, velocity: 0, channel: 0 });
+    }
+    
+  } catch (error) {
+    log(LOG_LEVELS.ERROR, "🎹 MIDI device health check failed:", error.message);
+    // Mark as disconnected and try to reconnect
+    midiDeviceState.isConnected = false;
+    reconnectMidiDevices();
+  }
+}
+
+// Reconnect MIDI devices when they're disconnected
+function reconnectMidiDevices() {
+  // Mark as reconnecting
+  midiDeviceState.isReconnecting = true;
+  
+  // Only proceed if we're not already reconnecting
+  if (midiDeviceState.isConnected) {
+    log(LOG_LEVELS.WARN, "🔄 MIDI device disconnected, attempting to reconnect...");
+    
+    // Close existing connections
+    try {
+      if (input && typeof input.close === 'function') {
+        input.close();
+      }
+      if (output && typeof output.close === 'function') {
+        output.close();
+      }
+    } catch (error) {
+      log(LOG_LEVELS.WARN, "⚠️ Error closing MIDI devices during reconnection:", error);
+    }
+    
+    // Reset state
+    midiDeviceState.isConnected = false;
+    midiDeviceState.reconnectAttempts = 0;
+  }
+  
+  // Try to reconnect (whether we were connected before or not)
+  setTimeout(() => {
+    initializeMidiDevices();
+  }, 1000);
+}
+
+// Function to set up MIDI event listeners
+function setupMidiEventListeners() {
+  // Add error handler for MIDI input
+  input.on("error", function (error) {
+    log(LOG_LEVELS.ERROR, "🎹 MIDI input error:", error);
+    reconnectMidiDevices();
+  });
+  
+  // Optimized noteon handler with template literals
+  input.on("noteon", function (msg) {
+    const { note } = msg;
+    
+    if (note >= SMALL_BUTTON_START && note <= SMALL_BUTTON_END) {
+      // Record user activity for adaptive frequency
+      recordActivity('user');
+      
+      if (WING_CONFIGURATION === 3) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note],
+          pageIndex: pageIndex,
+          buttonId: 0,
+          pressed: true,
+          released: false,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      } else if (note < 8) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note],
+          pageIndex: pageIndex2,
+          buttonId: 1,
+          pressed: true,
+          released: false,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      } else {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note],
+          pageIndex: pageIndex2,
+          buttonId: 2,
+          pressed: true,
+          released: false,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      }
+    }
+
+    if (note >= EXECUTOR_BUTTON_START && note <= EXECUTOR_BUTTON_END) {
+      // Record user activity for adaptive frequency
+      recordActivity('user');
+      
+      addMidiMessage({
+        requestType: "playbacks_userInput",
+        cmdline: "",
+        execIndex: buttons[note],
+        pageIndex: pageIndex,
+        buttonId: 0,
+        pressed: true,
+        released: false,
+        type: 0,
+        session: session,
+        maxRequests: 0
+      }, 'high');
+    }
+
+    if (note >= FADER_BUTTON_START && note <= FADER_BUTTON_END) {
+      // Record user activity for adaptive frequency
+      recordActivity('user');
+      
+      if (WING_CONFIGURATION === 3) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: note - FADER_LED_OFFSET,
+          pageIndex: pageIndex2,
+          buttonId: 0,
+          pressed: true,
+          released: false,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      } else {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note - FADER_LED_OFFSET],
+          pageIndex: pageIndex2,
+          buttonId: 0,
+          pressed: true,
+          released: false,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      }
+    }
+
+    if (note >= PAGE_SELECT_START && note <= PAGE_SELECT_END) {
+      // Record user activity for adaptive frequency
+      recordActivity('user');
+      
+      // Page select
+      if (clientConfig.pageSelectMode === 1) {
+        output.send("noteon", { note: pageIndex + PAGE_SELECT_START, velocity: 0, channel: 0 });
+        pageIndex = note - PAGE_SELECT_START;
+        output.send("noteon", { note: note, velocity: 127, channel: 0 });
+        if (clientConfig.controlOnpcPage) {
+          addMidiMessage({
+            command: `ButtonPage ${pageIndex + 1}`,
+            session: session,
+            requestType: "command",
+            maxRequests: 0
+          }, 'high');
+        }
+      }
+      if (clientConfig.pageSelectMode === 2) {
+        output.send("noteon", { note: pageIndex + PAGE_SELECT_START, velocity: 0, channel: 0 });
+        pageIndex = note - PAGE_SELECT_START;
+        pageIndex2 = note - PAGE_SELECT_START;
+        output.send("noteon", { note: note, velocity: 127, channel: 0 });
+        if (clientConfig.controlOnpcPage) {
+          addMidiMessage({
+            command: `Page ${pageIndex + 1}`,
+            session: session,
+            requestType: "command",
+            maxRequests: 0
+          }, 'high');
+        }
+      }
+    }
+
+    if (note === SHIFT_BUTTON) {
+      // Record user activity for adaptive frequency
+      recordActivity('user');
+      
+      // Shift Button
+      if (WING_CONFIGURATION === 1) {
+        addMidiMessage({
+          command: "SpecialMaster 2.1 At 0",
+          session: session,
+          requestType: "command",
+          maxRequests: 0
+        }, 'high');
+        blackout = 1;
+      } else if (WING_CONFIGURATION === 2) {
+        addMidiMessage({
+          command: "Learn SpecialMaster 3.1",
+          session: session,
+          requestType: "command",
+          maxRequests: 0
+        }, 'high');
+      } else if (WING_CONFIGURATION === 3) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: "8",
+          pageIndex: pageIndex2,
+          buttonId: 0,
+          pressed: true,
+          released: false,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      }
+    }
+  });
+
+  // Optimized noteoff handler
+  input.on("noteoff", function (msg) {
+    const { note } = msg;
+    
+    if (note >= SMALL_BUTTON_START && note <= SMALL_BUTTON_END) {
+      if (WING_CONFIGURATION === 3) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note],
+          pageIndex: pageIndex,
+          buttonId: 0,
+          pressed: false,
+          released: true,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      } else if (note < 8) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note],
+          pageIndex: pageIndex2,
+          buttonId: 1,
+          pressed: false,
+          released: true,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      } else {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note],
+          pageIndex: pageIndex2,
+          buttonId: 2,
+          pressed: false,
+          released: true,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      }
+    }
+
+    if (note >= 16 && note <= 63) {
+      addMidiMessage({
+        requestType: "playbacks_userInput",
+        cmdline: "",
+        execIndex: buttons[note],
+        pageIndex: pageIndex,
+        buttonId: 0,
+        pressed: false,
+        released: true,
+        type: 0,
+        session: session,
+        maxRequests: 0
+      }, 'high');
+    }
+
+    if (note >= 100 && note <= 107) {
+      if (WING_CONFIGURATION === 3) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: note - 100,
+          pageIndex: pageIndex2,
+          buttonId: 0,
+          pressed: false,
+          released: true,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      } else {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: buttons[note - 100],
+          pageIndex: pageIndex2,
+          buttonId: 0,
+          pressed: false,
+          released: true,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      }
+    }
+
+    if (note === 122) {
+      // Shift Button
+      if (WING_CONFIGURATION === 1) {
+        addMidiMessage({
+          command: `SpecialMaster 2.1 At ${faderValueMem[MAIN_FADER_CONTROLLER] * SPECIAL_MASTER_MULTIPLIER}`,
+          session: session,
+          requestType: "command",
+          maxRequests: 0
+        }, 'high');
+        blackout = 0;
+      } else if (WING_CONFIGURATION === 3) {
+        addMidiMessage({
+          requestType: "playbacks_userInput",
+          cmdline: "",
+          execIndex: "8",
+          pageIndex: pageIndex2,
+          buttonId: 0,
+          pressed: false,
+          released: true,
+          type: 0,
+          session: session,
+          maxRequests: 0
+        }, 'high');
+      }
+    }
+  });
+
+  // Optimized CC handler
+  input.on("cc", function (msg) {
+    const diff = process.hrtime(faderTime[msg.controller]);
+    const timeDiff = diff[0] * NS_PER_SEC + diff[1];
+    
+    if (timeDiff >= FADER_THROTTLE_TIME || msg.value === 0 || msg.value === 127) {
+      // Record fader activity for adaptive frequency
+      recordActivity('fader');
+      
+      faderTime[msg.controller] = process.hrtime();
+      faderValueMem[msg.controller] = faderValue[msg.value];
+
+      if (msg.controller === MAIN_FADER_CONTROLLER) {
+        if (WING_CONFIGURATION === 1) {
+          if (blackout === 0) {
+            addMidiMessage({
+              command: `SpecialMaster 2.1 At ${faderValue[msg.value] * SPECIAL_MASTER_MULTIPLIER}`,
+              session: session,
+              requestType: "command",
+              maxRequests: 0
+            }, 'normal');
+          }
+        } else if (WING_CONFIGURATION === 2) {
+          addMidiMessage({
+            command: `SpecialMaster 3.1 At ${faderValue[msg.value] * SPECIAL_MASTER_3_MULTIPLIER}`,
+            session: session,
+            requestType: "command",
+            maxRequests: 0
+          }, 'normal');
+        } else if (WING_CONFIGURATION === 3) {
+          addMidiMessage({
+            requestType: "playbacks_userInput",
+            execIndex: "8",
+            pageIndex: pageIndex2,
+            faderValue: faderValue[msg.value],
+            type: 1,
+            session: session,
+            maxRequests: 0
+          }, 'normal');
+        }
+      } else {
+        if (WING_CONFIGURATION === 3) {
+          addMidiMessage({
+            requestType: "playbacks_userInput",
+            execIndex: msg.controller - FADER_CONTROLLER_START,
+            pageIndex: pageIndex2,
+            faderValue: faderValue[msg.value],
+            type: 1,
+            session: session,
+            maxRequests: 0
+          }, 'normal');
+        } else {
+          addMidiMessage({
+            requestType: "playbacks_userInput",
+            execIndex: buttons[msg.controller - FADER_CONTROLLER_START],
+            pageIndex: pageIndex2,
+            faderValue: faderValue[msg.value],
+            type: 1,
+            session: session,
+            maxRequests: 0
+          }, 'normal');
+        }
+      }
+    }
+  });
+  
+  log(LOG_LEVELS.INFO, "🎹 MIDI event listeners configured");
+}
+
+// Function to refresh LED states after reconnection
+function refreshLedStates() {
+  // Only refresh if MIDI devices are connected
+  if (!midiDeviceState.isConnected || !output) {
+    log(LOG_LEVELS.WARN, "⚠️ Cannot refresh LED states - MIDI device not connected");
+    return;
+  }
+  
+  log(LOG_LEVELS.INFO, "🔄 Refreshing LED states after reconnection...");
+  
+  try {
+    // Restore all LED states from memory
+    for (let i = 0; i < TOTAL_LEDS; i++) {
+      if (ledmatrix[i] !== 0 || led_isrun[i] !== 0) {
+        // Use direct MIDI send for immediate update
+        output.send("noteon", { 
+          note: i, 
+          velocity: ledmatrix[i], 
+          channel: led_isrun[i] 
+        });
+      }
+    }
+    
+    // Also update the page select LED to show current pageIndex
+    if (clientConfig.pageSelectMode > 0) {
+      // Turn off all page select buttons first
+      for (let i = PAGE_SELECT_START; i <= PAGE_SELECT_END; i++) {
+        output.send("noteon", { note: i, velocity: 0, channel: 0 });
+      }
+      
+      // Turn on the current page button
+      const currentPageLed = PAGE_SELECT_START + pageIndex;
+      output.send("noteon", { note: currentPageLed, velocity: 127, channel: 0 });
+    }
+    
+    log(LOG_LEVELS.INFO, "✅ LED states refreshed");
+  } catch (error) {
+    log(LOG_LEVELS.ERROR, "💥 Error refreshing LED states:", error);
+  }
+}
+
+// Initialize MIDI devices
+initializeMidiDevices();
+
+// Set up initial MIDI event listeners
+setupMidiEventListeners();
 
 // Non-blocking initialization delay
 sleep(INITIALIZATION_DELAY, function () {
@@ -516,362 +1093,7 @@ sleep(INITIALIZATION_DELAY, function () {
   flushLedBatch();
 });
 
-// Optimized noteon handler with template literals
-input.on("noteon", function (msg) {
-  const { note } = msg;
-  
-  if (note >= SMALL_BUTTON_START && note <= SMALL_BUTTON_END) {
-    // Record user activity for adaptive frequency
-    recordActivity('user');
-    
-    if (WING_CONFIGURATION === 3) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note],
-        pageIndex: pageIndex,
-        buttonId: 0,
-        pressed: true,
-        released: false,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    } else if (note < 8) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note],
-        pageIndex: pageIndex2,
-        buttonId: 1,
-        pressed: true,
-        released: false,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    } else {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note],
-        pageIndex: pageIndex2,
-        buttonId: 2,
-        pressed: true,
-        released: false,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    }
-  }
 
-  if (note >= EXECUTOR_BUTTON_START && note <= EXECUTOR_BUTTON_END) {
-    // Record user activity for adaptive frequency
-    recordActivity('user');
-    
-    addMidiMessage({
-      requestType: "playbacks_userInput",
-      cmdline: "",
-      execIndex: buttons[note],
-      pageIndex: pageIndex,
-      buttonId: 0,
-      pressed: true,
-      released: false,
-      type: 0,
-      session: session,
-      maxRequests: 0
-    }, 'high');
-  }
-
-  if (note >= FADER_BUTTON_START && note <= FADER_BUTTON_END) {
-    // Record user activity for adaptive frequency
-    recordActivity('user');
-    
-    if (WING_CONFIGURATION === 3) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: note - FADER_LED_OFFSET,
-        pageIndex: pageIndex2,
-        buttonId: 0,
-        pressed: true,
-        released: false,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    } else {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note - FADER_LED_OFFSET],
-        pageIndex: pageIndex2,
-        buttonId: 0,
-        pressed: true,
-        released: false,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    }
-  }
-
-  if (note >= PAGE_SELECT_START && note <= PAGE_SELECT_END) {
-    // Record user activity for adaptive frequency
-    recordActivity('user');
-    
-    // Page select
-    if (clientConfig.pageSelectMode === 1) {
-      output.send("noteon", { note: pageIndex + PAGE_SELECT_START, velocity: 0, channel: 0 });
-      pageIndex = note - PAGE_SELECT_START;
-      output.send("noteon", { note: note, velocity: 127, channel: 0 });
-      if (clientConfig.controlOnpcPage) {
-        addMidiMessage({
-          command: `ButtonPage ${pageIndex + 1}`,
-          session: session,
-          requestType: "command",
-          maxRequests: 0
-        }, 'high');
-      }
-    }
-    if (clientConfig.pageSelectMode === 2) {
-      output.send("noteon", { note: pageIndex + PAGE_SELECT_START, velocity: 0, channel: 0 });
-      pageIndex = note - PAGE_SELECT_START;
-      pageIndex2 = note - PAGE_SELECT_START;
-      output.send("noteon", { note: note, velocity: 127, channel: 0 });
-      if (clientConfig.controlOnpcPage) {
-        addMidiMessage({
-          command: `Page ${pageIndex + 1}`,
-          session: session,
-          requestType: "command",
-          maxRequests: 0
-        }, 'high');
-      }
-    }
-  }
-
-  if (note === SHIFT_BUTTON) {
-    // Record user activity for adaptive frequency
-    recordActivity('user');
-    
-    // Shift Button
-    if (WING_CONFIGURATION === 1) {
-      addMidiMessage({
-        command: "SpecialMaster 2.1 At 0",
-        session: session,
-        requestType: "command",
-        maxRequests: 0
-      }, 'high');
-      blackout = 1;
-    } else if (WING_CONFIGURATION === 2) {
-      addMidiMessage({
-        command: "Learn SpecialMaster 3.1",
-        session: session,
-        requestType: "command",
-        maxRequests: 0
-      }, 'high');
-    } else if (WING_CONFIGURATION === 3) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: "8",
-        pageIndex: pageIndex2,
-        buttonId: 0,
-        pressed: true,
-        released: false,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    }
-  }
-});
-
-// Optimized noteoff handler
-input.on("noteoff", function (msg) {
-  const { note } = msg;
-  
-  if (note >= SMALL_BUTTON_START && note <= SMALL_BUTTON_END) {
-    if (WING_CONFIGURATION === 3) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note],
-        pageIndex: pageIndex,
-        buttonId: 0,
-        pressed: false,
-        released: true,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    } else if (note < 8) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note],
-        pageIndex: pageIndex2,
-        buttonId: 1,
-        pressed: false,
-        released: true,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    } else {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note],
-        pageIndex: pageIndex2,
-        buttonId: 2,
-        pressed: false,
-        released: true,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    }
-  }
-
-  if (note >= 16 && note <= 63) {
-    addMidiMessage({
-      requestType: "playbacks_userInput",
-      cmdline: "",
-      execIndex: buttons[note],
-      pageIndex: pageIndex,
-      buttonId: 0,
-      pressed: false,
-      released: true,
-      type: 0,
-      session: session,
-      maxRequests: 0
-    }, 'high');
-  }
-
-  if (note >= 100 && note <= 107) {
-    if (WING_CONFIGURATION === 3) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: note - 100,
-        pageIndex: pageIndex2,
-        buttonId: 0,
-        pressed: false,
-        released: true,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    } else {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: buttons[note - 100],
-        pageIndex: pageIndex2,
-        buttonId: 0,
-        pressed: false,
-        released: true,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    }
-  }
-
-  if (note === 122) {
-    // Shift Button
-    if (WING_CONFIGURATION === 1) {
-      addMidiMessage({
-        command: `SpecialMaster 2.1 At ${faderValueMem[MAIN_FADER_CONTROLLER] * SPECIAL_MASTER_MULTIPLIER}`,
-        session: session,
-        requestType: "command",
-        maxRequests: 0
-      }, 'high');
-      blackout = 0;
-    } else if (WING_CONFIGURATION === 3) {
-      addMidiMessage({
-        requestType: "playbacks_userInput",
-        cmdline: "",
-        execIndex: "8",
-        pageIndex: pageIndex2,
-        buttonId: 0,
-        pressed: false,
-        released: true,
-        type: 0,
-        session: session,
-        maxRequests: 0
-      }, 'high');
-    }
-  }
-});
-
-// Optimized CC handler
-input.on("cc", function (msg) {
-  const diff = process.hrtime(faderTime[msg.controller]);
-  const timeDiff = diff[0] * NS_PER_SEC + diff[1];
-  
-  if (timeDiff >= FADER_THROTTLE_TIME || msg.value === 0 || msg.value === 127) {
-    // Record fader activity for adaptive frequency
-    recordActivity('fader');
-    
-    faderTime[msg.controller] = process.hrtime();
-    faderValueMem[msg.controller] = faderValue[msg.value];
-
-    if (msg.controller === MAIN_FADER_CONTROLLER) {
-      if (WING_CONFIGURATION === 1) {
-        if (blackout === 0) {
-          addMidiMessage({
-            command: `SpecialMaster 2.1 At ${faderValue[msg.value] * SPECIAL_MASTER_MULTIPLIER}`,
-            session: session,
-            requestType: "command",
-            maxRequests: 0
-          }, 'normal');
-        }
-      } else if (WING_CONFIGURATION === 2) {
-        addMidiMessage({
-          command: `SpecialMaster 3.1 At ${faderValue[msg.value] * SPECIAL_MASTER_3_MULTIPLIER}`,
-          session: session,
-          requestType: "command",
-          maxRequests: 0
-        }, 'normal');
-      } else if (WING_CONFIGURATION === 3) {
-        addMidiMessage({
-          requestType: "playbacks_userInput",
-          execIndex: "8",
-          pageIndex: pageIndex2,
-          faderValue: faderValue[msg.value],
-          type: 1,
-          session: session,
-          maxRequests: 0
-        }, 'normal');
-      }
-    } else {
-      if (WING_CONFIGURATION === 3) {
-        addMidiMessage({
-          requestType: "playbacks_userInput",
-          execIndex: msg.controller - FADER_CONTROLLER_START,
-          pageIndex: pageIndex2,
-          faderValue: faderValue[msg.value],
-          type: 1,
-          session: session,
-          maxRequests: 0
-        }, 'normal');
-      } else {
-        addMidiMessage({
-          requestType: "playbacks_userInput",
-          execIndex: buttons[msg.controller - FADER_CONTROLLER_START],
-          pageIndex: pageIndex2,
-          faderValue: faderValue[msg.value],
-          type: 1,
-          session: session,
-          maxRequests: 0
-        }, 'normal');
-      }
-    }
-  }
-});
 
 log(LOG_LEVELS.INFO, "🔌 Connecting to grandMA2 ...");
 
