@@ -1627,6 +1627,109 @@ function logColorMatchingStats() {
   performance.colorMatching.logColorMatchingStats();
 }
 
+// Comprehensive cleanup function for graceful shutdown
+function cleanupResources() {
+  log(LOG_LEVELS.INFO, "🧹 Starting graceful shutdown...");
+  
+  try {
+    // Clear all LEDs
+    log(LOG_LEVELS.INFO, "💡 Clearing all LEDs...");
+    midiclear();
+    
+    // Flush any pending batched updates
+    try {
+      flushLedBatch();
+    } catch (error) {
+      log(LOG_LEVELS.WARN, "⚠️ Error flushing LED batch during cleanup:", error);
+    }
+    
+    // Flush any pending MIDI messages
+    try {
+      flushMidiQueue();
+    } catch (error) {
+      log(LOG_LEVELS.WARN, "⚠️ Error flushing MIDI queue during cleanup:", error);
+    }
+    
+    // Clear all intervals and timeouts
+    log(LOG_LEVELS.INFO, "⏰ Clearing all intervals and timeouts...");
+    if (midiDeviceState.healthCheckInterval) {
+      clearInterval(midiDeviceState.healthCheckInterval);
+      midiDeviceState.healthCheckInterval = null;
+    }
+    if (midiDeviceState.retryTimeout) {
+      clearTimeout(midiDeviceState.retryTimeout);
+      midiDeviceState.retryTimeout = null;
+    }
+    
+    // Close MIDI devices
+    log(LOG_LEVELS.INFO, "🎹 Closing MIDI devices...");
+    try {
+      if (input && typeof input.close === 'function') {
+        input.close();
+      }
+      if (output && typeof output.close === 'function') {
+        output.close();
+      }
+    } catch (error) {
+      log(LOG_LEVELS.WARN, "⚠️ Error closing MIDI devices during cleanup:", error);
+    }
+    
+    // Close WebSocket connection
+    log(LOG_LEVELS.INFO, "🔌 Closing WebSocket connection...");
+    try {
+      if (client && typeof client.close === 'function') {
+        client.close();
+      }
+    } catch (error) {
+      log(LOG_LEVELS.WARN, "⚠️ Error closing WebSocket during cleanup:", error);
+    }
+    
+    // Stop performance monitoring
+    log(LOG_LEVELS.INFO, "📊 Stopping performance monitoring...");
+    try {
+      // Clear any performance module intervals
+      if (performance && typeof performance.cleanup === 'function') {
+        performance.cleanup();
+      }
+    } catch (error) {
+      log(LOG_LEVELS.WARN, "⚠️ Error cleaning up performance modules:", error);
+    }
+    
+    log(LOG_LEVELS.INFO, "✅ Graceful shutdown completed");
+    
+  } catch (error) {
+    log(LOG_LEVELS.ERROR, "💥 Error during cleanup:", error);
+  }
+}
+
+// Process signal handlers for graceful shutdown
+process.on('SIGINT', () => {
+  log(LOG_LEVELS.INFO, "🛑 Received SIGINT (Ctrl+C), shutting down gracefully...");
+  cleanupResources();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  log(LOG_LEVELS.INFO, "🛑 Received SIGTERM, shutting down gracefully...");
+  cleanupResources();
+  process.exit(0);
+});
+
+// Global error handlers
+process.on('uncaughtException', (error) => {
+  log(LOG_LEVELS.ERROR, "💥 Uncaught exception:", error);
+  log(LOG_LEVELS.ERROR, "📋 Stack trace:", error.stack);
+  cleanupResources();
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  log(LOG_LEVELS.ERROR, "💥 Unhandled promise rejection:", reason);
+  log(LOG_LEVELS.ERROR, "📋 Promise:", promise);
+  cleanupResources();
+  process.exit(1);
+});
+
 // Initialize all performance optimizations
 performance.initializeAll(clientConfig, log);
 
