@@ -1,6 +1,7 @@
 //ma2apcmini mk2 v 1.7.8 color v4 - by ArtGateOne (edits by Local-9) - OPTIMIZED
 const easymidi = require("easymidi");
 const W3CWebSocket = require("websocket").w3cwebsocket;
+const crypto = require("crypto");
 
 // Import performance optimization modules
 const performance = require('./performance');
@@ -8,10 +9,19 @@ const performance = require('./performance');
 // ============================================================================
 // USER CONFIGURATION SECTION - MODIFY THESE SETTINGS AS NEEDED
 // ============================================================================
+// 
+// AUTHENTICATION SETUP:
+// 1. Set your GrandMA2 Web Remote username and password below
+// 2. The password will be automatically MD5 hashed when sent to GrandMA2
+// 3. Make sure your GrandMA2 Web Remote is enabled with the same credentials
+// 4. Default credentials: username="apcmini", password="remote"
+//
 
 /**
  * User-configurable settings for APC mini MA2 integration
  * @typedef {Object} ClientConfig
+ * @property {string} username - GrandMA2 Web Remote username
+ * @property {string} password - GrandMA2 Web Remote password (will be automatically MD5 hashed)
  * @property {number} pageSelectMode - Page select mode (0=off, 1=exec buttons only, 2=exec buttons and faders)
  * @property {boolean} controlOnpcPage - Enable page control on GrandMA2 OnPC
  * @property {number} brightness - LED brightness level (0-6, works when autoColor=false)
@@ -25,6 +35,10 @@ const performance = require('./performance');
  * @property {boolean} enableMemoryOptimization - Enable memory optimization for better performance
  */
 let clientConfig = {
+  // Authentication configuration
+  username: "apcmini",
+  password: "remote", // This will be automatically MD5 hashed when sent to GrandMA2
+  
   // Display configuration
   brightness: 6,
   darkMode: false,
@@ -109,6 +123,12 @@ let input, output;
 // Import logger module
 const logger = require('./performance/logger');
 const { LOG_LEVELS, log } = logger;
+
+// Password hashing function for GrandMA2 Web Remote authentication
+// Note: "remote" hashes to "2c18e486683a3db1e645ad8523223b72"
+function hashPassword(password) {
+  return crypto.createHash('md5').update(password).digest('hex');
+}
 
 let client = new W3CWebSocket(`ws://${WS_URL}:80/`);
 
@@ -898,8 +918,8 @@ client.onmessage = function (e) {
         session = obj.session;
         client.send(JSON.stringify({
           requestType: "login",
-          username: "apcmini",
-          password: "2c18e486683a3db1e645ad8523223b72",
+          username: clientConfig.username,
+          password: hashPassword(clientConfig.password),
           session: session,
           maxRequests: 10
         }));
@@ -949,7 +969,7 @@ client.onmessage = function (e) {
 
       if (obj.session) {
         if (obj.session === -1) {
-          log(LOG_LEVELS.ERROR, '🔐 Please turn on Web Remote, and set Web Remote password to "remote"');
+          log(LOG_LEVELS.ERROR, `🔐 Please turn on Web Remote, and set Web Remote password to "${clientConfig.password}"`);
           midiclear();
           input.close();
           output.close();
@@ -1387,6 +1407,9 @@ function logColorMatchingStats() {
 
 // Initialize all performance optimizations
 performance.initializeAll(clientConfig, log);
+
+// Log authentication configuration
+log(LOG_LEVELS.INFO, `🔐 Authentication configured: username="${clientConfig.username}", password="[HIDDEN]"`);
 
 // Memory Optimization Functions - Performance Optimization
 // Memory optimization functions are now handled by modular system
