@@ -6,6 +6,9 @@ const crypto = require("crypto");
 // Import performance optimization modules
 const performance = require('./performance');
 
+// Import marquee animation module
+const marquee = require('./performance/marquee');
+
 // ============================================================================
 // USER CONFIGURATION SECTION - MODIFY THESE SETTINGS AS NEEDED
 // ============================================================================
@@ -48,6 +51,18 @@ let clientConfig = {
   // Page control configuration
   pageSelectMode: 1,
   controlOnpcPage: true,
+  
+  // Marquee animation configuration
+  marquee: {
+    enabled: true,
+    text: "ArtGateOne",
+    speed: 100, // milliseconds between frames
+    brightness: 127, // LED brightness (0-127)
+    color: 127, // LED color (0-127, 127 = white)
+    repeat: 2, // number of times to repeat the animation
+    clearAfter: true, // whether to clear LEDs after animation
+    randomizeColors: true, // whether to randomize colors per letter
+  },
   
   // Performance configuration
   enableLedBatching: true,
@@ -1064,34 +1079,54 @@ function refreshLedStates() {
   }
 }
 
-// Initialize MIDI devices
-initializeMidiDevices();
-
-// Set up initial MIDI event listeners
-setupMidiEventListeners();
-
-// Non-blocking initialization delay
-sleep(INITIALIZATION_DELAY, function () {
-  // Clear LED matrix and LED status - display .2
-  for (let i = FADER_LED_OFFSET; i < TOTAL_LEDS; i++) {
-    addLedUpdate(i, 0, 0);
-  }
-
-  for (let i = 0; i < 90; i++) {
-    addLedUpdate(i, ledmatrix[i], CHANNEL);
-  }
-
-  // Turn on page select buttons
-  if (clientConfig.pageSelectMode > 0) {
-    addLedUpdate(PAGE_SELECT_START, 127, 0);
-    for (let i = PAGE_SELECT_START + 1; i <= PAGE_SELECT_END; i++) {
-      addLedUpdate(i, 0, 0);
+// Initialize MIDI devices and run marquee animation
+async function initializeSystem() {
+  try {
+    // Initialize MIDI devices
+    await initializeMidiDevices();
+    log(LOG_LEVELS.INFO, "🎹 MIDI devices initialized successfully");
+    
+    // Set up initial MIDI event listeners
+    setupMidiEventListeners();
+    
+    // Run marquee animation if enabled
+    if (clientConfig.marquee && clientConfig.marquee.enabled) {
+      log(LOG_LEVELS.INFO, "🎭 Starting marquee animation...");
+      await marquee.runMarquee(output, clientConfig.marquee, getClosestVelocity);
+      log(LOG_LEVELS.INFO, "✅ Marquee animation completed");
     }
+    
+    // Non-blocking initialization delay
+    sleep(INITIALIZATION_DELAY, function () {
+      // Clear LED matrix and LED status - display .2
+      for (let i = FADER_LED_OFFSET; i < TOTAL_LEDS; i++) {
+        addLedUpdate(i, 0, 0);
+      }
+
+      for (let i = 0; i < 90; i++) {
+        addLedUpdate(i, ledmatrix[i], CHANNEL);
+      }
+
+      // Turn on page select buttons
+      if (clientConfig.pageSelectMode > 0) {
+        addLedUpdate(PAGE_SELECT_START, 127, 0);
+        for (let i = PAGE_SELECT_START + 1; i <= PAGE_SELECT_END; i++) {
+          addLedUpdate(i, 0, 0);
+        }
+      }
+      
+      // Flush any remaining batched updates
+      flushLedBatch();
+    });
+    
+  } catch (error) {
+    log(LOG_LEVELS.ERROR, "💥 Failed to initialize system:", error);
+    process.exit(1);
   }
-  
-  // Flush any remaining batched updates
-  flushLedBatch();
-});
+}
+
+// Start the system initialization
+initializeSystem();
 
 
 
