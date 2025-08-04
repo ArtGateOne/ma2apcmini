@@ -376,8 +376,6 @@ async function runMarquee(output, config = null, colorToVelocity = null) {
         }
       }
     }
-
-    log(LOG_LEVELS.INFO, "✅ Marquee animation completed");
   } catch (error) {
     log(LOG_LEVELS.ERROR, "💥 Error during marquee animation:", error);
   }
