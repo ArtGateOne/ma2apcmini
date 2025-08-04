@@ -1104,7 +1104,7 @@ async function initializeSystem() {
       }
 
       for (let i = 0; i < 90; i++) {
-        addLedUpdate(i, ledmatrix[i], CHANNEL);
+        addLedUpdate(i, ledmatrix[i], led_isrun[i]);
       }
 
       // Turn on page select buttons
