@@ -203,19 +203,17 @@ function findClosestVelocityForCommonColor(color) {
   let closestColor = null;
   let closestDistance = Infinity;
 
-  // Search only in common colors for speed
-  for (const commonColor of colorMatchingState.commonColors) {
-    if (colorToVelocity.hasOwnProperty(commonColor)) {
-      const currentRgb = hexToRgb(commonColor);
-      const distance = colorDistanceManhattan(targetRgb, currentRgb);
+  // Search in the entire colorToVelocity map to find the closest match
+  for (const [key, velocity] of Object.entries(colorToVelocity)) {
+    const currentRgb = hexToRgb(key);
+    const distance = colorDistanceManhattan(targetRgb, currentRgb);
+    
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestColor = key;
       
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closestColor = commonColor;
-        
-        // Early exit for exact or very close matches
-        if (distance <= COLOR_MATCHING_CONFIG.PRECISION_THRESHOLD) break;
-      }
+      // Early exit for exact or very close matches
+      if (distance <= COLOR_MATCHING_CONFIG.PRECISION_THRESHOLD) break;
     }
   }
 
