@@ -1200,6 +1200,9 @@ client.onmessage = function (e) {
             // Only check connection state for non-login messages
       if (!connectionState.isConnected) {
         log(LOG_LEVELS.WARN, `⚠️ Received message but not connected (${obj.responseType || 'unknown'}), ignoring`);
+        if (!obj.responseType) {
+          log(LOG_LEVELS.WARN, `🔍 Object: ${JSON.stringify(obj)}`);
+        }
         return;
       }
 
