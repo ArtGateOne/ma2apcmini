@@ -1652,7 +1652,7 @@ function processAutoColorMode(ledIndex, isRunning, backgroundColor) {
   if (isRunning) {
     // Executor is running - use the actual background color
     velocity = getOptimizedClosestVelocity(backgroundColor);
-    ledChannel = CHANNEL_BLINK; // Special channel for running executors
+    ledChannel = clientConfig.blink ? CHANNEL_BLINK : CHANNEL; // Special channel for running executors
   } else if (backgroundColor === "#3D3D3D") {
     // Empty executor - use empty color
     velocity = LED_COLORS.EXECUTOR_EMPTY;
@@ -1682,9 +1682,7 @@ function processManualColorMode(ledIndex, isRunning, backgroundColor) {
   if (isRunning) {
     // Executor is running - use ON color
     velocity = LED_COLORS.EXECUTOR_ON;
-    if (clientConfig.blink) {
-      ledChannel = CHANNEL_BLINK; // Blink channel
-    }
+    ledChannel = clientConfig.blink ? CHANNEL_BLINK : CHANNEL; // Special channel for running executors
   } else if (backgroundColor === "#3D3D3D") {
     // Empty executor - use empty color
     velocity = LED_COLORS.EXECUTOR_EMPTY;
