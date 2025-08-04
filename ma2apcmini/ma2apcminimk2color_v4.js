@@ -45,7 +45,7 @@ let clientConfig = {
   // Display configuration
   brightness: 6,
   darkMode: false,
-  autoColor: false,
+  autoColor: true,
   blink: true,
 
   // Page control configuration
