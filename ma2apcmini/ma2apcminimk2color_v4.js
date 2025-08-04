@@ -1217,7 +1217,7 @@ client.onmessage = function (e) {
         return;
       }
 
-      if (obj.forceLogin === true) {
+      if (obj.forceLogin === true && !connectionState.isConnected) {
         log(LOG_LEVELS.INFO, "🔐 LOGIN ...");
         session = obj.session;
         client.send(
