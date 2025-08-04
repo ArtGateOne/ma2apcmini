@@ -188,7 +188,7 @@ function scheduleReconnection() {
   setTimeout(() => {
     if (!connectionState.isConnected) {
       log(LOG_LEVELS.INFO, "🔄 Attempting to reconnect...");
-      client = new W3CWebSocket(WS_URL);
+      client = new W3CWebSocket(`ws://${WS_URL}:80/`);
       initializeConnection();
       // Reset connection state for new connection
       connectionState.isConnected = false;
