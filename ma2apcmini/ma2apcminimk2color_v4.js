@@ -54,11 +54,11 @@ let clientConfig = {
   
   // Marquee animation configuration
   marquee: {
-    enabled: true,
+    enabled: false,
     text: "ArtGateOne",
     speed: 100, // milliseconds between frames
-    brightness: 127, // LED brightness (0-127)
-    color: 127, // LED color (0-127, 127 = white)
+    brightness: 6, // LED brightness (1-6)
+    color: 127, // LED color
     repeat: 1, // number of times to repeat the animation
     clearAfter: true, // whether to clear LEDs after animation
     randomizeColors: true, // whether to randomize colors per letter
