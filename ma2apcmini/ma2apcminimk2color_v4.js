@@ -45,7 +45,7 @@ let clientConfig = {
   // Display configuration
   brightness: 6,
   darkMode: false,
-  autoColor: true,
+  autoColor: false,
   blink: false,
 
   // Page control configuration
@@ -86,6 +86,7 @@ const FADER_LED_OFFSET = 100;             // Starting LED index for fader button
 const PAGE_SELECT_START = 112;            // Starting LED index for page select buttons
 const PAGE_SELECT_END = 119;              // Ending LED index for page select buttons
 const SHIFT_BUTTON = 122;                 // LED index for shift button
+const CHANNEL_BLINK = 8;
 
 // MIDI Configuration
 const FADER_CONTROLLER_START = 48;        // Starting MIDI controller number for faders
@@ -1584,7 +1585,7 @@ function processAutoColorMode(ledIndex, isRunning, backgroundColor) {
   if (isRunning) {
     // Executor is running - use the actual background color
     velocity = getOptimizedClosestVelocity(backgroundColor);
-    ledChannel = 8; // Special channel for running executors
+    ledChannel = CHANNEL_BLINK; // Special channel for running executors
   } else if (backgroundColor === "#3D3D3D") {
     // Empty executor - use empty color
     velocity = LED_COLORS.EXECUTOR_EMPTY;
@@ -1615,7 +1616,7 @@ function processManualColorMode(ledIndex, isRunning, backgroundColor) {
     // Executor is running - use ON color
     velocity = LED_COLORS.EXECUTOR_ON;
     if (clientConfig.blink) {
-      ledChannel = 9; // Blink channel
+      ledChannel = CHANNEL_BLINK; // Blink channel
     }
   } else if (backgroundColor === "#3D3D3D") {
     // Empty executor - use empty color
