@@ -1291,7 +1291,7 @@ function processWing1ButtonLEDs(itemGroups) {
       const combinedItems = itemGroups[currentRowIndex][buttonIndex].combinedItems;
       
       for (let item = 0; item < combinedItems; item++) {
-        led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+        processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
         currentLedIndex++;
       }
       buttonIndex++;
@@ -1313,7 +1313,7 @@ function processWing1ButtonLEDs(itemGroups) {
       
       for (let item = 0; item < combinedItems; item++) {
         if (currentLedIndex < endLedIndex) {
-          led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+          processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
           currentLedIndex++;
         }
       }
@@ -1340,7 +1340,7 @@ function processWing2ButtonLEDs(itemGroups) {
       for (let item = 0; item < combinedItems; item++) {
         // Only process the last 3 LEDs in each row
         if (currentLedIndex >= endLedIndex - 3) {
-          led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+          processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
         }
         currentLedIndex++;
       }
@@ -1362,7 +1362,7 @@ function processWing2ButtonLEDs(itemGroups) {
       const combinedItems = itemGroups[currentRowIndex][buttonIndex].combinedItems;
       
       for (let item = 0; item < combinedItems; item++) {
-        led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+        processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
         currentLedIndex++;
       }
       buttonIndex++;
@@ -1386,7 +1386,7 @@ function processWing3ButtonLEDs(itemGroups) {
       const combinedItems = itemGroups[currentRowIndex][buttonIndex].combinedItems;
       
       for (let item = 0; item < combinedItems; item++) {
-        led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+        processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
         currentLedIndex++;
       }
       buttonIndex++;
@@ -1408,7 +1408,7 @@ function processWing3ButtonLEDs(itemGroups) {
       
       for (let item = 0; item < combinedItems; item++) {
         if (currentLedIndex < endLedIndex) {
-          led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+          processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
           currentLedIndex++;
         }
       }
@@ -1444,7 +1444,7 @@ function processWing1FaderLEDs(itemGroups) {
     const combinedItems = itemGroups[currentRowIndex][buttonIndex].combinedItems;
   
     for (let item = 0; item < combinedItems; item++) {
-      led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+      processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
       currentLedIndex++;
     }
     buttonIndex++;
@@ -1461,7 +1461,7 @@ function processWing1FaderLEDs(itemGroups) {
     
           for (let item = 0; item < combinedItems; item++) {
         if (currentLedIndex < endLedIndex) {
-          led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+          processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
           currentLedIndex++;
         }
       }
@@ -1483,7 +1483,7 @@ function processWing2FaderLEDs(itemGroups) {
     for (let item = 0; item < combinedItems; item++) {
       // Only process LEDs 0 and above (skip negative indices)
       if (currentLedIndex >= 0) {
-        led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+        processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
       }
       currentLedIndex++;
     }
@@ -1502,7 +1502,7 @@ function processWing2FaderLEDs(itemGroups) {
       const combinedItems = itemGroups[currentRowIndex][buttonIndex].combinedItems;
       
       for (let item = 0; item < combinedItems; item++) {
-        led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
+        processLedFeedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
         currentLedIndex++;
       }
       buttonIndex++;
@@ -1523,7 +1523,7 @@ function processWing3FaderLEDs(itemGroups) {
     
     for (let item = 0; item < combinedItems; item++) {
       // For Wing 3, directly control LED brightness based on isRun status
-      const isRunning = itemGroups[currentRowIndex][buttonIndex].isRun === 1;
+      const isRunning = Boolean(itemGroups[currentRowIndex][buttonIndex].isRun);
       const velocity = isRunning ? 1 : 0;
       
       output.send("noteon", {
@@ -1564,9 +1564,9 @@ function processWing3FaderLEDs(itemGroups) {
 }
 
 // Update LED feedback based on executor status and color configuration
-function led_feedback(buttonIndex, ledIndex, rowIndex, itemGroups) {
+function processLedFeedback(buttonIndex, ledIndex, rowIndex, itemGroups) {
   const executorItem = itemGroups[rowIndex][buttonIndex];
-  const isRunning = executorItem.isRun === 1;
+  const isRunning = Boolean(executorItem.isRun);
   const backgroundColor = executorItem.bdC;
 
   if (clientConfig.autoColor) {
