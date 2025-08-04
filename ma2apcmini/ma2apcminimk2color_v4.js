@@ -1242,6 +1242,12 @@ client.onmessage = function (e) {
         log(LOG_LEVELS.INFO, "✅ ...LOGGED");
         log(LOG_LEVELS.INFO, `🔑 SESSION ${session}`);
         connectionState.isConnected = true; // Mark as connected after successful login
+        
+        // Refresh LED states after successful reconnection to ensure MIDI matches current state
+        if (connectionState.reconnectAttempts > 0) {
+          log(LOG_LEVELS.INFO, "🔄 WebSocket reconnection successful, refreshing LED states...");
+          setTimeout(() => refreshLedStates(), 1000); // Small delay to ensure data processing has started
+        }
         return;
       }
 
