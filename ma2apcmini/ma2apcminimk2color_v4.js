@@ -626,7 +626,7 @@ function checkMidiDeviceHealth() {
     
     // Test if we can still send a message (this will throw if device is disconnected)
     if (output && typeof output.send === 'function') {
-      // Send a silent note to test connection (note 0, velocity 0)
+      // Send a note to test connection, velocity is the ledmatrix value, channel is the led_isrun value or 0 if undefined
       output.send("noteon", { note: 0, velocity: ledmatrix[0], channel: led_isrun[0] || 0 });
     }
     
