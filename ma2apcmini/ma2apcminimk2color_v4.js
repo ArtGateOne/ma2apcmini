@@ -46,7 +46,7 @@ let clientConfig = {
   brightness: 6,
   darkMode: false,
   autoColor: false,
-  blink: false,
+  blink: true,
 
   // Page control configuration
   pageSelectMode: 1,
@@ -1687,8 +1687,9 @@ function processManualColorMode(ledIndex, isRunning, backgroundColor) {
     velocity = LED_COLORS.EXECUTOR_OFF;
   }
 
-  // Only update LED if value has changed
-  if (ledmatrix[ledIndex] !== velocity) {
+  // Only update LED if values have changed
+  if (ledmatrix[ledIndex] !== velocity || led_isrun[ledIndex] !== ledChannel) {
+    led_isrun[ledIndex] = ledChannel;
     ledmatrix[ledIndex] = velocity;
 
     // Record LED change for adaptive frequency
