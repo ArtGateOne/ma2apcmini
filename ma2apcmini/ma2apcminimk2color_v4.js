@@ -59,7 +59,7 @@ let clientConfig = {
     speed: 100, // milliseconds between frames
     brightness: 127, // LED brightness (0-127)
     color: 127, // LED color (0-127, 127 = white)
-    repeat: 2, // number of times to repeat the animation
+    repeat: 1, // number of times to repeat the animation
     clearAfter: true, // whether to clear LEDs after animation
     randomizeColors: true, // whether to randomize colors per letter
   },
@@ -627,7 +627,7 @@ function checkMidiDeviceHealth() {
     // Test if we can still send a message (this will throw if device is disconnected)
     if (output && typeof output.send === 'function') {
       // Send a silent note to test connection (note 0, velocity 0)
-      output.send("noteon", { note: 0, velocity: 0, channel: 0 });
+      output.send("noteon", { note: 0, velocity: ledmatrix[0], channel: led_isrun[0] || 0 });
     }
     
   } catch (error) {
@@ -1439,10 +1439,10 @@ function processWing1FaderLEDs(itemGroups) {
   let currentRowIndex = 0;
   let buttonIndex = 0;
   let endLedIndex = currentLedIndex + 5;
-  
+
   while (currentLedIndex < endLedIndex) {
     const combinedItems = itemGroups[currentRowIndex][buttonIndex].combinedItems;
-    
+  
     for (let item = 0; item < combinedItems; item++) {
       led_feedback(buttonIndex, currentLedIndex, currentRowIndex, itemGroups);
       currentLedIndex++;
@@ -1568,7 +1568,7 @@ function led_feedback(buttonIndex, ledIndex, rowIndex, itemGroups) {
   const executorItem = itemGroups[rowIndex][buttonIndex];
   const isRunning = executorItem.isRun === 1;
   const backgroundColor = executorItem.bdC;
-  
+
   if (clientConfig.autoColor) {
     processAutoColorMode(ledIndex, isRunning, backgroundColor);
   } else {
