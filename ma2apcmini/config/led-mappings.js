@@ -3,99 +3,107 @@
 // Each LED maps to a specific executor with its row and button position in itemGroups
 
 // Wing 1 Configuration (Standard APC mini layout)
-const WING1_LED_MAPPING = {
-  // Row 1 (LEDs 56-63) - Top row of executor buttons
-  56: { executor: 100, row: 0, button: 0, description: "Row 1, Button 1" },
-  57: { executor: 101, row: 0, button: 1, description: "Row 1, Button 2" },
-  58: { executor: 102, row: 0, button: 2, description: "Row 1, Button 3" },
-  59: { executor: 103, row: 0, button: 3, description: "Row 1, Button 4" },
-  60: { executor: 104, row: 0, button: 4, description: "Row 1, Button 5" },
-  61: { executor: 105, row: 1, button: 0, description: "Row 1, Button 6" },
-  62: { executor: 106, row: 1, button: 1, description: "Row 1, Button 7" },
-  63: { executor: 107, row: 1, button: 2, description: "Row 1, Button 8" },
+// Executor-to-LED mapping for easier lookup
+// In grandMA2, the executors number is indexed one higher than the mapping here
+// So executor 101 is mapped 100, which is LED 56, etc.
+const WING1_EXECUTOR_MAPPING = {
+  // Row 1 executors (100-107)
+  100: { ledIndex: 56, row: 0, button: 0, description: "Row 1, Button 1" },
+  101: { ledIndex: 57, row: 0, button: 1, description: "Row 1, Button 2" },
+  102: { ledIndex: 58, row: 0, button: 2, description: "Row 1, Button 3" },
+  103: { ledIndex: 59, row: 0, button: 3, description: "Row 1, Button 4" },
+  104: { ledIndex: 60, row: 0, button: 4, description: "Row 1, Button 5" },
+  105: { ledIndex: 61, row: 1, button: 0, description: "Row 1, Button 6" },
+  106: { ledIndex: 62, row: 1, button: 1, description: "Row 1, Button 7" },
+  107: { ledIndex: 63, row: 1, button: 2, description: "Row 1, Button 8" },
 
-  // Row 2 (LEDs 48-55) - Second row of executor buttons
-  48: { executor: 108, row: 3, button: 0, description: "Row 2, Button 1" },
-  49: { executor: 109, row: 3, button: 1, description: "Row 2, Button 2" },
-  50: { executor: 110, row: 3, button: 2, description: "Row 2, Button 3" },
-  51: { executor: 111, row: 3, button: 3, description: "Row 2, Button 4" },
-  52: { executor: 112, row: 3, button: 4, description: "Row 2, Button 5" },
-  53: { executor: 113, row: 4, button: 0, description: "Row 2, Button 6" },
-  54: { executor: 114, row: 4, button: 1, description: "Row 2, Button 7" },
-  55: { executor: 115, row: 4, button: 2, description: "Row 2, Button 8" },
+  // Row 2 executors (108-115)
+  108: { ledIndex: 48, row: 3, button: 0, description: "Row 2, Button 1" },
+  109: { ledIndex: 49, row: 3, button: 1, description: "Row 2, Button 2" },
+  110: { ledIndex: 50, row: 3, button: 2, description: "Row 2, Button 3" },
+  111: { ledIndex: 51, row: 3, button: 3, description: "Row 2, Button 4" },
+  112: { ledIndex: 52, row: 3, button: 4, description: "Row 2, Button 5" },
+  113: { ledIndex: 53, row: 4, button: 0, description: "Row 2, Button 6" },
+  114: { ledIndex: 54, row: 4, button: 1, description: "Row 2, Button 7" },
+  115: { ledIndex: 55, row: 4, button: 2, description: "Row 2, Button 8" },
 
-  // Row 3 (LEDs 40-47) - Third row of executor buttons
-  40: { executor: 116, row: 6, button: 0, description: "Row 3, Button 1" },
-  41: { executor: 117, row: 6, button: 1, description: "Row 3, Button 2" },
-  42: { executor: 118, row: 6, button: 2, description: "Row 3, Button 3" },
-  43: { executor: 119, row: 6, button: 3, description: "Row 3, Button 4" },
-  44: { executor: 120, row: 6, button: 4, description: "Row 3, Button 5" },
-  45: { executor: 121, row: 7, button: 0, description: "Row 3, Button 6" },
-  46: { executor: 122, row: 7, button: 1, description: "Row 3, Button 7" },
-  47: { executor: 123, row: 7, button: 2, description: "Row 3, Button 8" },
+  // Row 3 executors (116-123)
+  116: { ledIndex: 40, row: 6, button: 0, description: "Row 3, Button 1" },
+  117: { ledIndex: 41, row: 6, button: 1, description: "Row 3, Button 2" },
+  118: { ledIndex: 42, row: 6, button: 2, description: "Row 3, Button 3" },
+  119: { ledIndex: 43, row: 6, button: 3, description: "Row 3, Button 4" },
+  120: { ledIndex: 44, row: 6, button: 4, description: "Row 3, Button 5" },
+  121: { ledIndex: 45, row: 7, button: 0, description: "Row 3, Button 6" },
+  122: { ledIndex: 46, row: 7, button: 1, description: "Row 3, Button 7" },
+  123: { ledIndex: 47, row: 7, button: 2, description: "Row 3, Button 8" },
 
-  // Row 4 (LEDs 32-39) - Fourth row of executor buttons
-  32: { executor: 124, row: 9, button: 0, description: "Row 4, Button 1" },
-  33: { executor: 125, row: 9, button: 1, description: "Row 4, Button 2" },
-  34: { executor: 126, row: 9, button: 2, description: "Row 4, Button 3" },
-  35: { executor: 127, row: 9, button: 3, description: "Row 4, Button 4" },
-  36: { executor: 128, row: 9, button: 4, description: "Row 4, Button 5" },
-  37: { executor: 129, row: 10, button: 0, description: "Row 4, Button 6" },
-  38: { executor: 130, row: 10, button: 1, description: "Row 4, Button 7" },
-  39: { executor: 131, row: 10, button: 2, description: "Row 4, Button 8" },
+  // Row 4 executors (124-131)
+  124: { ledIndex: 32, row: 9, button: 0, description: "Row 4, Button 1" },
+  125: { ledIndex: 33, row: 9, button: 1, description: "Row 4, Button 2" },
+  126: { ledIndex: 34, row: 9, button: 2, description: "Row 4, Button 3" },
+  127: { ledIndex: 35, row: 9, button: 3, description: "Row 4, Button 4" },
+  128: { ledIndex: 36, row: 9, button: 4, description: "Row 4, Button 5" },
+  129: { ledIndex: 37, row: 10, button: 0, description: "Row 4, Button 6" },
+  130: { ledIndex: 38, row: 10, button: 1, description: "Row 4, Button 7" },
+  131: { ledIndex: 39, row: 10, button: 2, description: "Row 4, Button 8" },
 
-  // Row 5 (LEDs 24-31) - Fifth row of executor buttons
-  24: { executor: 132, row: 12, button: 0, description: "Row 5, Button 1" },
-  25: { executor: 133, row: 12, button: 1, description: "Row 5, Button 2" },
-  26: { executor: 134, row: 12, button: 2, description: "Row 5, Button 3" },
-  27: { executor: 135, row: 12, button: 3, description: "Row 5, Button 4" },
-  28: { executor: 136, row: 12, button: 4, description: "Row 5, Button 5" },
-  29: { executor: 137, row: 13, button: 0, description: "Row 5, Button 6" },
-  30: { executor: 138, row: 13, button: 1, description: "Row 5, Button 7" },
-  31: { executor: 139, row: 13, button: 2, description: "Row 5, Button 8" },
+  // Row 5 executors (132-139)
+  132: { ledIndex: 24, row: 12, button: 0, description: "Row 5, Button 1" },
+  133: { ledIndex: 25, row: 12, button: 1, description: "Row 5, Button 2" },
+  134: { ledIndex: 26, row: 12, button: 2, description: "Row 5, Button 3" },
+  135: { ledIndex: 27, row: 12, button: 3, description: "Row 5, Button 4" },
+  136: { ledIndex: 28, row: 12, button: 4, description: "Row 5, Button 5" },
+  137: { ledIndex: 29, row: 13, button: 0, description: "Row 5, Button 6" },
+  138: { ledIndex: 30, row: 13, button: 1, description: "Row 5, Button 7" },
+  139: { ledIndex: 31, row: 13, button: 2, description: "Row 5, Button 8" },
 
-  // Row 6 (LEDs 16-23) - Sixth row of executor buttons
-  16: { executor: 140, row: 15, button: 0, description: "Row 6, Button 1" },
-  17: { executor: 141, row: 15, button: 1, description: "Row 6, Button 2" },
-  18: { executor: 142, row: 15, button: 2, description: "Row 6, Button 3" },
-  19: { executor: 143, row: 15, button: 3, description: "Row 6, Button 4" },
-  20: { executor: 144, row: 15, button: 4, description: "Row 6, Button 5" },
-  21: { executor: 145, row: 16, button: 0, description: "Row 6, Button 6" },
-  22: { executor: 146, row: 16, button: 1, description: "Row 6, Button 7" },
-  23: { executor: 147, row: 16, button: 2, description: "Row 6, Button 8" },
+  // Row 6 executors (140-147)
+  140: { ledIndex: 16, row: 15, button: 0, description: "Row 6, Button 1" },
+  141: { ledIndex: 17, row: 15, button: 1, description: "Row 6, Button 2" },
+  142: { ledIndex: 18, row: 15, button: 2, description: "Row 6, Button 3" },
+  143: { ledIndex: 19, row: 15, button: 3, description: "Row 6, Button 4" },
+  144: { ledIndex: 20, row: 15, button: 4, description: "Row 6, Button 5" },
+  145: { ledIndex: 21, row: 16, button: 0, description: "Row 6, Button 6" },
+  146: { ledIndex: 22, row: 16, button: 1, description: "Row 6, Button 7" },
+  147: { ledIndex: 23, row: 16, button: 2, description: "Row 6, Button 8" },
 
-  // Fader buttons (LEDs 0-7)
-  0: { executor: 148, row: 0, button: 0, description: "Fader 1" },
-  1: { executor: 149, row: 0, button: 1, description: "Fader 2" },
-  2: { executor: 150, row: 0, button: 2, description: "Fader 3" },
-  3: { executor: 151, row: 0, button: 3, description: "Fader 4" },
-  4: { executor: 152, row: 0, button: 4, description: "Fader 5" },
-  5: { executor: 153, row: 1, button: 0, description: "Fader 6" },
-  6: { executor: 154, row: 1, button: 1, description: "Fader 7" },
-  7: { executor: 155, row: 1, button: 2, description: "Fader 8" },
-
-  // Small buttons (LEDs 8-15) - Debug keys
-  8: { executor: null, row: null, button: null, description: "Debug Key 1" },
-  9: { executor: null, row: null, button: null, description: "Debug Key 2" },
-  10: { executor: null, row: null, button: null, description: "Debug Key 3" },
-  11: { executor: null, row: null, button: null, description: "Debug Key 4" },
-  12: { executor: null, row: null, button: null, description: "Debug Key 5" },
-  13: { executor: null, row: null, button: null, description: "Debug Key 6" },
-  14: { executor: null, row: null, button: null, description: "Debug Key 7" },
-  15: { executor: null, row: null, button: null, description: "Debug Key 8" }
+  // Fader executors (148-155)
+  148: { ledIndex: 0, row: 0, button: 0, description: "Fader 1" },
+  149: { ledIndex: 1, row: 0, button: 1, description: "Fader 2" },
+  150: { ledIndex: 2, row: 0, button: 2, description: "Fader 3" },
+  151: { ledIndex: 3, row: 0, button: 3, description: "Fader 4" },
+  152: { ledIndex: 4, row: 0, button: 4, description: "Fader 5" },
+  153: { ledIndex: 5, row: 1, button: 0, description: "Fader 6" },
+  154: { ledIndex: 6, row: 1, button: 1, description: "Fader 7" },
+  155: { ledIndex: 7, row: 1, button: 2, description: "Fader 8" }
 };
 
+// Reverse mapping for LED-to-executor lookup (for backward compatibility)
+const WING1_LED_MAPPING = {};
+Object.entries(WING1_EXECUTOR_MAPPING).forEach(([executor, data]) => {
+  WING1_LED_MAPPING[data.ledIndex] = {
+    executor: parseInt(executor),
+    row: data.row,
+    button: data.button,
+    description: data.description
+  };
+});
+
 // Wing 2 Configuration (Different layout)
-const WING2_LED_MAPPING = {
+const WING2_EXECUTOR_MAPPING = {
   // Add Wing 2 specific mappings here
   // This would be different based on the Wing 2 layout
 };
 
+const WING2_LED_MAPPING = {};
+
 // Wing 3 Configuration (Different layout)
-const WING3_LED_MAPPING = {
+const WING3_EXECUTOR_MAPPING = {
   // Add Wing 3 specific mappings here
   // This would be different based on the Wing 3 layout
 };
+
+const WING3_LED_MAPPING = {};
 
 // Helper function to get the appropriate mapping based on wing configuration
 function getLedMapping(wingConfig) {
@@ -109,6 +117,48 @@ function getLedMapping(wingConfig) {
     default:
       return WING1_LED_MAPPING;
   }
+}
+
+// Helper function to get the appropriate executor mapping based on wing configuration
+function getExecutorMapping(wingConfig) {
+  switch (wingConfig) {
+    case 1:
+      return WING1_EXECUTOR_MAPPING;
+    case 2:
+      return WING2_EXECUTOR_MAPPING;
+    case 3:
+      return WING3_EXECUTOR_MAPPING;
+    default:
+      return WING1_EXECUTOR_MAPPING;
+  }
+}
+
+// Helper function to get LED index for a specific executor
+function getLedForExecutor(executor, wingConfig) {
+  const executorMapping = getExecutorMapping(wingConfig);
+  const mapping = executorMapping[executor];
+  return mapping ? mapping.ledIndex : null;
+}
+
+// Helper function to get all LEDs for a range of executors (useful for combined items)
+function getLedsForExecutorRange(startExecutor, endExecutor, wingConfig) {
+  const executorMapping = getExecutorMapping(wingConfig);
+  const leds = [];
+  
+  for (let executor = startExecutor; executor <= endExecutor; executor++) {
+    const mapping = executorMapping[executor];
+    if (mapping) {
+      leds.push({
+        executor: executor,
+        ledIndex: mapping.ledIndex,
+        row: mapping.row,
+        button: mapping.button,
+        description: mapping.description
+      });
+    }
+  }
+  
+  return leds;
 }
 
 // Helper function to get executor data for a specific LED
@@ -232,10 +282,16 @@ function getFirstLedForExecutor(executor, mapping) {
 
 module.exports = {
   WING1_LED_MAPPING,
+  WING1_EXECUTOR_MAPPING,
   WING2_LED_MAPPING,
+  WING2_EXECUTOR_MAPPING,
   WING3_LED_MAPPING,
+  WING3_EXECUTOR_MAPPING,
   getLedMapping,
+  getExecutorMapping,
   getExecutorData,
   getFirstLedForExecutor,
-  getInheritedCombinedData
+  getInheritedCombinedData,
+  getLedForExecutor,
+  getLedsForExecutorRange
 }; 
