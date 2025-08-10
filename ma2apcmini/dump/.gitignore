@@ -1,0 +1,4 @@
+# Ignore all dump files and directories
+dumps/
+*.txt
+*.log 

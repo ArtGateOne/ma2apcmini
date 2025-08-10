@@ -9,6 +9,12 @@ const performance = require("./performance");
 // Import marquee animation module
 const marquee = require("./performance/marquee");
 
+// Import debug dump module
+const debugDump = require("./dump/debug-dump");
+
+// Import LED mapping configuration
+const { getExecutorData } = require("./config/led-mappings");
+
 // ============================================================================
 // USER CONFIGURATION SECTION - MODIFY THESE SETTINGS AS NEEDED
 // ============================================================================
@@ -152,29 +158,8 @@ let client = new W3CWebSocket(`ws://${WS_URL}:80/`);
 function initializeConnection() {
   log(LOG_LEVELS.INFO, "🔌 Initializing connection to GrandMA2...");
 
-  client.onopen = function () {
-    log(LOG_LEVELS.INFO, "✅ WebSocket connection established");
-    // Don't set isConnected to true yet - wait for successful login
-    connectionState.isReconnecting = false;
-    connectionState.reconnectAttempts = 0;
-    connectionState.reconnectDelay = 1000;
-  };
-
-  client.onclose = function (event) {
-    log(LOG_LEVELS.WARN, "🔌 WebSocket connection closed", { code: event.code, reason: event.reason });
-    connectionState.isConnected = false;
-
-    if (!connectionState.isReconnecting && connectionState.reconnectAttempts < connectionState.maxReconnectAttempts) {
-      scheduleReconnection();
-    } else if (connectionState.reconnectAttempts >= connectionState.maxReconnectAttempts) {
-      log(LOG_LEVELS.ERROR, "🛑 Max reconnection attempts reached. Manual intervention required.");
-    }
-  };
-
-  client.onerror = function (error) {
-    log(LOG_LEVELS.ERROR, "💥 WebSocket error occurred", error);
-    connectionState.isConnected = false;
-  };
+  // Set up WebSocket event handlers
+  setupWebSocketHandlers(client);
 }
 
 function scheduleReconnection() {
@@ -186,11 +171,20 @@ function scheduleReconnection() {
 
   log(LOG_LEVELS.WARN, `🔄 Scheduling reconnection attempt ${connectionState.reconnectAttempts}/${connectionState.maxReconnectAttempts} in ${delay}ms`);
 
-  setTimeout(() => {
+  setTimeout(async () => {
     if (!connectionState.isConnected) {
       log(LOG_LEVELS.INFO, "🔄 Attempting to reconnect...");
+
+      // Step 1: Reconnect MIDI devices first
+      log(LOG_LEVELS.INFO, "🎹 Reconnecting MIDI devices...");
+      await initializeMidiDevices();
+      setupMidiEventListeners();
+
+      // Step 2: Then reconnect WebSocket
+      log(LOG_LEVELS.INFO, "🌍 Reconnecting WebSocket...");
       client = new W3CWebSocket(`ws://${WS_URL}:80/`);
       initializeConnection();
+
       // Reset connection state for new connection
       connectionState.isConnected = false;
     }
@@ -234,6 +228,18 @@ function logLedBatchStats() {
 
 // MIDI Message Throttling Functions - Performance Optimization (Modular)
 function addMidiMessage(message, priority = "normal") {
+  // Track MIDI message for debugging
+  midiHistory.push({
+    timestamp: Date.now(),
+    message: message,
+    priority: priority,
+  });
+
+  // Keep only the last MAX_MIDI_HISTORY messages
+  if (midiHistory.length > MAX_MIDI_HISTORY) {
+    midiHistory = midiHistory.slice(-MAX_MIDI_HISTORY);
+  }
+
   performance.midiThrottling.addMidiMessage(message, priority, client, clientConfig, performance.memoryOptimization);
 }
 
@@ -321,6 +327,17 @@ let pageIndex2 = 0; //fader page
 let request = 0;
 let interval_on = false;
 let session = 0;
+
+// Debug state variables
+let debugMode = false;
+let debugKeySequence = [];
+let debugKeyTimeout = null;
+const DEBUG_KEY_COMBO = [8, 9, 10]; // Notes 8, 9, 10 for debug combo
+const DEBUG_KEY_TIMEOUT = 2000; // 2 seconds to complete key combo
+
+// MIDI message history for debugging
+let midiHistory = [];
+const MAX_MIDI_HISTORY = 1000; // Keep last 1000 messages
 
 // Initialize LED matrix based on wing configuration
 let ledmatrix = performance.memoryOptimization.getOptimizedArray(TOTAL_LEDS, 0);
@@ -461,6 +478,104 @@ function midiclear() {
   }
   // Flush batched updates immediately for clear operation
   flushLedBatch();
+}
+
+// Debug functions for MIDI data dumping
+function handleDebugKeyCombo(note) {
+  // Add note to sequence
+  if (!debugKeySequence.includes(note)) {
+    debugKeySequence.push(note);
+  }
+
+  // Clear existing timeout
+  if (debugKeyTimeout) {
+    clearTimeout(debugKeyTimeout);
+  }
+
+  // Check if we have the full combo
+  if (debugKeySequence.length === DEBUG_KEY_COMBO.length) {
+    const isComboMatch = DEBUG_KEY_COMBO.every((expectedNote, index) => debugKeySequence[index] === expectedNote);
+
+    if (isComboMatch) {
+      toggleDebugMode();
+    }
+
+    // Reset sequence
+    debugKeySequence = [];
+    return;
+  }
+
+  // Set timeout to reset sequence if combo not completed
+  debugKeyTimeout = setTimeout(() => {
+    debugKeySequence = [];
+    debugKeyTimeout = null;
+  }, DEBUG_KEY_TIMEOUT);
+}
+
+function toggleDebugMode() {
+  debugMode = !debugMode;
+  log(LOG_LEVELS.INFO, `🔧 Debug mode ${debugMode ? "ENABLED" : "DISABLED"}`);
+
+  // Visual feedback - flash debug LEDs
+  for (let i = 8; i <= 15; i++) {
+    const velocity = debugMode ? 127 : 0;
+    output.send("noteon", { note: i, velocity: velocity, channel: 0 });
+  }
+
+  if (debugMode) {
+    log(LOG_LEVELS.INFO, "📊 Debug mode active - MIDI data will be logged");
+    log(LOG_LEVELS.INFO, "🎹 Press notes 8, 9, 10 in sequence to toggle debug mode");
+    log(LOG_LEVELS.INFO, "📋 Press note 11 to dump current LED matrix with server data");
+    log(LOG_LEVELS.INFO, "📋 Press note 12 to dump current page state");
+    log(LOG_LEVELS.INFO, "📋 Press note 13 to dump recent MIDI messages");
+    log(LOG_LEVELS.INFO, "📋 Press note 14 to dump performance stats");
+    log(LOG_LEVELS.INFO, "📋 Press note 15 to dump all debug info");
+  }
+}
+
+function dumpLEDMatrix() {
+  const filepath = debugDump.dumpLEDMatrix(ledmatrix, led_isrun, pageIndex, pageIndex2, WING_CONFIGURATION, TOTAL_LEDS, lastServerData);
+  if (filepath) {
+    log(LOG_LEVELS.INFO, `📊 LED Matrix dump saved to: ${filepath}`);
+  } else {
+    log(LOG_LEVELS.ERROR, "❌ Failed to save LED Matrix dump");
+  }
+}
+
+function dumpPageState() {
+  const filepath = debugDump.dumpPageState(pageIndex, pageIndex2, clientConfig, session, request, interval_on, blackout);
+  if (filepath) {
+    log(LOG_LEVELS.INFO, `📊 Page State dump saved to: ${filepath}`);
+  } else {
+    log(LOG_LEVELS.ERROR, "❌ Failed to save Page State dump");
+  }
+}
+
+function dumpRecentMIDI() {
+  const filepath = debugDump.dumpRecentMIDI(midiHistory);
+  if (filepath) {
+    log(LOG_LEVELS.INFO, `📊 Recent MIDI Messages dump saved to: ${filepath}`);
+  } else {
+    log(LOG_LEVELS.ERROR, "❌ Failed to save Recent MIDI Messages dump");
+  }
+}
+
+function dumpPerformanceStats() {
+  const filepath = debugDump.dumpPerformanceStats(getLedBatchStats, getMidiThrottleStats, getWebsocketFrequencyStats, getColorMatchingStats, getMemoryOptimizationStats);
+  if (filepath) {
+    log(LOG_LEVELS.INFO, `📊 Performance Stats dump saved to: ${filepath}`);
+  } else {
+    log(LOG_LEVELS.ERROR, "❌ Failed to save Performance Stats dump");
+  }
+}
+
+function dumpAllDebugInfo() {
+  const filepath = debugDump.dumpAllDebugInfo(debugMode, connectionState, midiDeviceState, pageIndex, pageIndex2, clientConfig, session, request, interval_on, blackout, ledmatrix, led_isrun, WING_CONFIGURATION, TOTAL_LEDS, getLedBatchStats, getMidiThrottleStats, getWebsocketFrequencyStats, getColorMatchingStats, getMemoryOptimizationStats, midiHistory);
+  if (filepath) {
+    log(LOG_LEVELS.INFO, `📊 Comprehensive Debug dump saved to: ${filepath}`);
+  } else {
+    log(LOG_LEVELS.ERROR, "❌ Failed to save Comprehensive Debug dump");
+  }
 }
 
 // Initialize connection
@@ -659,6 +774,38 @@ function setupMidiEventListeners() {
   // Optimized noteon handler with template literals
   input.on("noteon", function (msg) {
     const { note } = msg;
+
+    // Debug key handling - check for debug combo and individual debug keys
+    if (note >= 8 && note <= 15) {
+      // Handle debug key combo (notes 8, 9, 10)
+      if (note >= 8 && note <= 10) {
+        handleDebugKeyCombo(note);
+      }
+
+      // Handle individual debug keys when debug mode is active
+      if (debugMode) {
+        switch (note) {
+          case 11:
+            dumpLEDMatrix();
+            break;
+          case 12:
+            dumpPageState();
+            break;
+          case 13:
+            dumpRecentMIDI();
+            break;
+          case 14:
+            dumpPerformanceStats();
+            break;
+          case 15:
+            dumpAllDebugInfo();
+            break;
+        }
+      }
+
+      // Don't process debug keys as regular buttons
+      return;
+    }
 
     if (note >= SMALL_BUTTON_START && note <= SMALL_BUTTON_END) {
       // Record user activity for adaptive frequency
@@ -1177,171 +1324,230 @@ async function initializeSystem() {
 // Start the system initialization
 initializeSystem();
 
-log(LOG_LEVELS.INFO, "🔌 Connecting to grandMA2 ...");
+// Function to set up WebSocket event handlers
+function setupWebSocketHandlers(client) {
+  client.onerror = function () {
+    log(LOG_LEVELS.ERROR, "💥 Connection Error");
+  };
 
-// WEBSOCKET handlers
-client.onerror = function () {
-  log(LOG_LEVELS.ERROR, "💥 Connection Error");
-};
+  client.onopen = function () {
+    log(LOG_LEVELS.INFO, "✅ WebSocket Client Connected");
+  };
 
-client.onopen = function () {
-  log(LOG_LEVELS.INFO, "✅ WebSocket Client Connected");
-};
+  client.onclose = function () {
+    log(LOG_LEVELS.WARN, "🔌 Client Closed");
+    for (let i = 0; i < TOTAL_LEDS; i++) {
+      output.send("noteon", { note: i, velocity: 0, channel: 0 });
+    }
+    input.close();
+    output.close();
+    process.exit();
+  };
 
-client.onclose = function () {
-  log(LOG_LEVELS.WARN, "🔌 Client Closed");
-  for (let i = 0; i < TOTAL_LEDS; i++) {
-    output.send("noteon", { note: i, velocity: 0, channel: 0 });
-  }
-  input.close();
-  output.close();
-  process.exit();
-};
-
-// Optimized message handler with error handling
-client.onmessage = function (e) {
-  // Allow login messages even when not fully connected
-  if (typeof e.data === "string") {
-    try {
-      if (!validateResponse(e.data)) {
-        log(LOG_LEVELS.WARN, "⚠️ Invalid response received, skipping processing");
-        return;
-      }
-
-      const obj = JSON.parse(e.data);
-
-      // Handle login and connection establishment first
-      if (obj.status === "server ready") {
-        log(LOG_LEVELS.INFO, "🟢 SERVER READY");
-        client.send(JSON.stringify({ session: 0 }));
-        return;
-      }
-
-      if (obj.forceLogin === true && !connectionState.isConnected) {
-        log(LOG_LEVELS.INFO, "🔐 LOGIN ...");
-        session = obj.session;
-        client.send(
-          JSON.stringify({
-            requestType: "login",
-            username: clientConfig.username,
-            password: hashPassword(clientConfig.password),
-            session: session,
-            maxRequests: 10,
-          })
-        );
-        return;
-      }
-
-      if (obj.responseType === "login" && obj.result === true) {
-        if (!interval_on) {
-          interval_on = true;
-          // Start fixed interval system for now
-          setInterval(interval, INTERVAL_DELAY);
-          log(LOG_LEVELS.INFO, `🌍 Started fixed WebSocket frequency (${INTERVAL_DELAY}ms)`);
+  // Optimized message handler with error handling
+  client.onmessage = function (e) {
+    // Allow login messages even when not fully connected
+    if (typeof e.data === "string") {
+      try {
+        if (!validateResponse(e.data)) {
+          log(LOG_LEVELS.WARN, "⚠️ Invalid response received, skipping processing");
+          return;
         }
-        log(LOG_LEVELS.INFO, "✅ ...LOGGED");
-        log(LOG_LEVELS.INFO, `🔑 SESSION ${session}`);
-        connectionState.isConnected = true; // Mark as connected after successful login
-        
-        // Refresh LED states after successful reconnection to ensure MIDI matches current state
-        if (connectionState.reconnectAttempts > 0) {
-          log(LOG_LEVELS.INFO, "🔄 WebSocket reconnection successful, refreshing LED states...");
-          setTimeout(() => refreshLedStates(), 1000); // Small delay to ensure data processing has started
+
+        const obj = JSON.parse(e.data);
+
+        // Handle login and connection establishment first
+        if (obj.status === "server ready") {
+          log(LOG_LEVELS.INFO, "🟢 SERVER READY");
+          client.send(JSON.stringify({ session: 0 }));
+          return;
         }
-        return;
-      }
 
-      if (obj.connections_limit_reached !== undefined) {
-        log(LOG_LEVELS.ERROR, "Connection limit reached - too many simultaneous connections");
-        log(LOG_LEVELS.ERROR, "Please close other MA2 Web Remote connections and try again");
-        connectionState.isConnected = false;
-        scheduleReconnection();
-        return;
-      }
-
-      // Only check connection state for non-login messages
-      if (!connectionState.isConnected) {
-        log(LOG_LEVELS.WARN, `⚠️ Received message but not connected (${obj.responseType || "unknown"}), ignoring`);
-        if (!obj.responseType) {
-          log(LOG_LEVELS.WARN, `🔍 Object: ${JSON.stringify(obj)}`);
-        }
-        return;
-      }
-
-      if (request >= REQUEST_THRESHOLD) {
-        try {
-          client.send(JSON.stringify({ session: session }));
+        if (obj.forceLogin === true && !connectionState.isConnected) {
+          log(LOG_LEVELS.INFO, "🔐 LOGIN ...");
+          session = obj.session;
           client.send(
             JSON.stringify({
-              requestType: "getdata",
-              data: "set,clear,solo,high",
+              requestType: "login",
+              username: clientConfig.username,
+              password: hashPassword(clientConfig.password),
               session: session,
-              maxRequests: 1,
+              maxRequests: 10,
             })
           );
-          request = 0;
-        } catch (error) {
-          log(LOG_LEVELS.ERROR, "💥 Failed to send request", error);
-        }
-      }
-
-      if (obj.session === 0) {
-        log(LOG_LEVELS.ERROR, "🔌 CONNECTION ERROR - attempting to reconnect");
-        connectionState.isConnected = false;
-        scheduleReconnection();
-        client.send(JSON.stringify({ session: session }));
-      }
-
-      if (obj.session) {
-        if (obj.session === -1) {
-          log(LOG_LEVELS.ERROR, `🔐 Please turn on Web Remote, and set Web Remote password to "${clientConfig.password}"`);
-          midiclear();
-          input.close();
-          output.close();
-          process.exit(1);
-        } else {
-          session = obj.session;
-        }
-      }
-
-      if (obj.text) {
-        log(LOG_LEVELS.INFO, obj.text);
-      }
-
-      if (obj.responseType === "login" && obj.result === false) {
-        log(LOG_LEVELS.ERROR, "❌ ...LOGIN ERROR");
-        log(LOG_LEVELS.ERROR, `🔑 SESSION ${session}`);
-      }
-
-      if (obj.responseType === "playbacks") {
-        request++;
-
-        if (obj.responseSubType === 3) {
-          // Button LED processing
-          processButtonLEDs(obj);
+          return;
         }
 
-        if (obj.responseSubType === 2) {
-          // Fader LED processing
-          processFaderLEDs(obj);
+        // Handle login response
+        if (obj.responseType === "login" && obj.result === true) {
+          if (!interval_on) {
+            interval_on = true;
+            // Start fixed interval system for now
+            setInterval(interval, INTERVAL_DELAY);
+            log(LOG_LEVELS.INFO, `🌍 Started fixed WebSocket frequency (${INTERVAL_DELAY}ms)`);
+          }
+          log(LOG_LEVELS.INFO, "✅ ...LOGGED");
+          log(LOG_LEVELS.INFO, `🔑 SESSION ${session}`);
+          connectionState.isConnected = true; // Mark as connected after successful login
+
+          // Refresh LED states after successful reconnection to ensure MIDI matches current state
+          if (connectionState.reconnectAttempts > 0) {
+            log(LOG_LEVELS.INFO, "🔄 WebSocket reconnection successful, refreshing LED states...");
+            setTimeout(() => refreshLedStates(), 1000); // Small delay to ensure data processing has started
+          }
+          return;
         }
+
+        if (obj.responseType === "login" && obj.result === false) {
+          log(LOG_LEVELS.ERROR, "❌ ...LOGIN ERROR");
+          log(LOG_LEVELS.ERROR, `🔑 SESSION ${session}`);
+          scheduleReconnection();
+          return;
+        }
+
+        if (obj.connections_limit_reached !== undefined) {
+          log(LOG_LEVELS.ERROR, "Connection limit reached - too many simultaneous connections");
+          log(LOG_LEVELS.ERROR, "Please close other MA2 Web Remote connections and try again");
+          connectionState.isConnected = false;
+          scheduleReconnection();
+          return;
+        }
+
+        // Only check connection state for non-login messages
+        if (!connectionState.isConnected) {
+          log(LOG_LEVELS.WARN, `⚠️ Received message but not connected (${obj.responseType || "unknown"}), ignoring`);
+          if (!obj.responseType) {
+            log(LOG_LEVELS.WARN, `🔍 Object: ${JSON.stringify(obj)}`);
+          }
+          return;
+        }
+
+        if (request >= REQUEST_THRESHOLD) {
+          try {
+            client.send(JSON.stringify({ session: session }));
+            client.send(
+              JSON.stringify({
+                requestType: "getdata",
+                data: "set,clear,solo,high",
+                session: session,
+                maxRequests: 1,
+              })
+            );
+            request = 0;
+          } catch (error) {
+            log(LOG_LEVELS.ERROR, "💥 Failed to send request", error);
+          }
+        }
+
+        if (obj.session === 0) {
+          log(LOG_LEVELS.ERROR, "🔌 CONNECTION ERROR - attempting to reconnect");
+          connectionState.isConnected = false;
+          scheduleReconnection();
+          client.send(JSON.stringify({ session: session }));
+        }
+
+        if (obj.session) {
+          if (obj.session === -1) {
+            log(LOG_LEVELS.ERROR, `🔐 Please turn on Web Remote, and set Web Remote password to "${clientConfig.password}"`);
+            midiclear();
+            input.close();
+            output.close();
+            process.exit(1);
+          } else {
+            session = obj.session;
+          }
+        }
+
+        if (obj.text) {
+          log(LOG_LEVELS.INFO, obj.text);
+        }
+
+        if (obj.responseType === "login" && obj.result === false) {
+          log(LOG_LEVELS.ERROR, "❌ ...LOGIN ERROR");
+          log(LOG_LEVELS.ERROR, `🔑 SESSION ${session}`);
+        }
+
+        if (obj.responseType === "playbacks") {
+          request++;
+
+          if (obj.responseSubType === 3) {
+            // Button LED processing
+            processButtonLEDs(obj);
+          }
+
+          if (obj.responseSubType === 2) {
+            // Fader LED processing - separate function for fader-specific handling
+            processFaderLEDs(obj);
+          }
+        }
+      } catch (error) {
+        log(LOG_LEVELS.ERROR, "💥 Error processing message", error);
       }
-    } catch (error) {
-      log(LOG_LEVELS.ERROR, "💥 Error processing message", error);
     }
-  }
-};
+  };
+}
 
 // Process button LED feedback for different wing configurations
 function processButtonLEDs(obj) {
   const itemGroups = obj.itemGroups[0].items;
 
-  if (WING_CONFIGURATION === 1) {
-    processWing1ButtonLEDs(itemGroups);
-  } else if (WING_CONFIGURATION === 2) {
-    processWing2ButtonLEDs(itemGroups);
-  } else if (WING_CONFIGURATION === 3) {
-    processWing3ButtonLEDs(itemGroups);
+  // Store itemGroups structure for debugging (only once per update)
+  if (!lastServerData.itemGroupsStructure) {
+    lastServerData.itemGroupsStructure = {
+      responseType: obj.responseType,
+      responseSubType: obj.responseSubType,
+      itemGroupsCount: obj.itemGroups.length,
+      itemsCount: itemGroups.length,
+      structure: []
+    };
+    
+    // Store the structure of the first few rows
+    for (let i = 0; i < Math.min(5, itemGroups.length); i++) {
+      lastServerData.itemGroupsStructure.structure.push({
+        row: i,
+        itemCount: itemGroups[i].length,
+        firstItem: itemGroups[i].length > 0 ? itemGroups[i][0] : null
+      });
+    }
+  }
+
+  // Process only button LEDs (16-63) using the mapping configuration
+  for (let ledIndex = 16; ledIndex <= 63; ledIndex++) {
+    const executorData = getExecutorData(ledIndex, WING_CONFIGURATION, itemGroups);
+    
+    if (executorData) {
+      const { executorItem, mapping } = executorData;
+      const isRunning = Boolean(executorItem.isRun);
+      const backgroundColor = executorItem.bdC;
+
+      // Store server data for debugging
+      lastServerData.leds[ledIndex] = {
+        buttonIndex: mapping.button,
+        rowIndex: mapping.row,
+        isRunning,
+        backgroundColor,
+        executorItem: JSON.parse(JSON.stringify(executorItem)), // Deep copy
+        autoColor: clientConfig.autoColor,
+        blink: clientConfig.blink,
+        brightness: clientConfig.brightness,
+        timestamp: new Date().toISOString(),
+        mapping: mapping,
+        type: "button",
+        combinedItems: mapping.combinedItems || 1,
+        currentExecutor: mapping.currentExecutor,
+        baseExecutor: mapping.baseExecutor,
+        isFirstInCombined: mapping.isFirstInCombined || false,
+        inheritedFrom: mapping.inheritedFrom
+      };
+      lastServerData.timestamp = new Date().toISOString();
+
+      // Process the LED feedback
+      if (clientConfig.autoColor) {
+        processAutoColorMode(ledIndex, isRunning, backgroundColor);
+      } else {
+        processManualColorMode(ledIndex, isRunning, backgroundColor);
+      }
+    }
   }
 }
 
@@ -1487,16 +1693,47 @@ function processWing3ButtonLEDs(itemGroups) {
   }
 }
 
-// Process fader LED feedback for different wing configurations
+// Process fader LED feedback using mapping configuration
 function processFaderLEDs(obj) {
   const itemGroups = obj.itemGroups[0].items;
 
-  if (WING_CONFIGURATION === 1) {
-    processWing1FaderLEDs(itemGroups);
-  } else if (WING_CONFIGURATION === 2) {
-    processWing2FaderLEDs(itemGroups);
-  } else if (WING_CONFIGURATION === 3) {
-    processWing3FaderLEDs(itemGroups);
+  // Process only fader LEDs (0-7) using the mapping configuration
+  for (let ledIndex = 0; ledIndex <= 7; ledIndex++) {
+    const executorData = getExecutorData(ledIndex, WING_CONFIGURATION, itemGroups);
+    
+    if (executorData) {
+      const { executorItem, mapping } = executorData;
+      const isRunning = Boolean(executorItem.isRun);
+      const backgroundColor = executorItem.bdC;
+
+      // Store server data for debugging
+      lastServerData.leds[ledIndex] = {
+        buttonIndex: mapping.button,
+        rowIndex: mapping.row,
+        isRunning,
+        backgroundColor,
+        executorItem: JSON.parse(JSON.stringify(executorItem)), // Deep copy
+        autoColor: clientConfig.autoColor,
+        blink: clientConfig.blink,
+        brightness: clientConfig.brightness,
+        timestamp: new Date().toISOString(),
+        mapping: mapping,
+        type: "fader",
+        combinedItems: mapping.combinedItems || 1,
+        currentExecutor: mapping.currentExecutor,
+        baseExecutor: mapping.baseExecutor,
+        isFirstInCombined: mapping.isFirstInCombined || false,
+        inheritedFrom: mapping.inheritedFrom
+      };
+      lastServerData.timestamp = new Date().toISOString();
+
+      // Process the fader LED feedback
+      if (clientConfig.autoColor) {
+        processAutoColorMode(ledIndex, isRunning, backgroundColor);
+      } else {
+        processManualColorMode(ledIndex, isRunning, backgroundColor);
+      }
+    }
   }
 }
 
@@ -1631,11 +1868,35 @@ function processWing3FaderLEDs(itemGroups) {
   }
 }
 
+// Global variables for server data tracking
+let lastServerData = {
+  leds: {}, // Store data for all LEDs
+  timestamp: null,
+  itemGroupsStructure: null // Store itemGroups structure for debugging
+};
+
 // Update LED feedback based on executor status and color configuration
+// Note: This function is now handled directly in processButtonLEDs using the mapping approach
+// Keeping this for reference but it's no longer used
+
 function processLedFeedback(buttonIndex, ledIndex, rowIndex, itemGroups) {
   const executorItem = itemGroups[rowIndex][buttonIndex];
   const isRunning = Boolean(executorItem.isRun);
   const backgroundColor = executorItem.bdC;
+
+  // Store server data for all LEDs for debugging
+  lastServerData.leds[ledIndex] = {
+    buttonIndex,
+    rowIndex,
+    isRunning,
+    backgroundColor,
+    executorItem: JSON.parse(JSON.stringify(executorItem)), // Deep copy
+    autoColor: clientConfig.autoColor,
+    blink: clientConfig.blink,
+    brightness: clientConfig.brightness,
+    timestamp: new Date().toISOString()
+  };
+  lastServerData.timestamp = new Date().toISOString();
 
   if (clientConfig.autoColor) {
     processAutoColorMode(ledIndex, isRunning, backgroundColor);
