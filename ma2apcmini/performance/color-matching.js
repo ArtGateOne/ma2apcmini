@@ -307,7 +307,7 @@ function getColorMatchingStats() {
 
 function logColorMatchingStats() {
   const stats = getColorMatchingStats();
-  logger.logInfo(`🎨 Color Matching Stats: ${stats.totalMatches} matches, ${stats.cacheHitRate}% hit rate, ${stats.cacheSize} cached`);
+  logger.logInfo(`🎨 Color Matching Stats: ${stats.totalMatches} matches, ${stats.cacheHitRate}% cache hit rate, ${stats.cacheSize} cached`);
 }
 
 // Export functions and configuration
