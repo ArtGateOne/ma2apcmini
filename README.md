@@ -194,23 +194,23 @@ V3 add control page command
 
 //config
 
-wing = 1; //set wing 1 2 or 3
+wing = 1; //set wing 1, 2, or 3
 
 pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
 
-control_onpc_page = 1; // change pages onpc 0=off, 1=on                       <------------------------ New
+control_onpc_page = 1; // change pages onpc 0=off, 1=on
 
 midi_in = "APC mini mk2"; //set correct midi in device name
 
 midi_out = "APC mini mk2"; //set correct midi out device name
 
-brightness = 6; //led brightness 0-6
+brightness = 6; //led brightness 0-6 (work in autocolor = 0)
 
-darkmode = 0; //new color mode 1 - ON , 0 - OFF
+darkmode = 0; //new color mode 1 - ON , 0 - OFF (work in autocolor = 0)
 
-autocolor = 1; //Executors color from apperance - 0 = off, 1 = ON
+autocolor = 2; //xecutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness)
 
-blink = 0; //no color Executor blink 1=on, 0=off
+blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 
 
 v.1.7.x
@@ -223,6 +223,9 @@ The buttons above them control the executor assigned to each fader (the last fad
 The entire 8x8 executor panel handles action buttons in a 2-row by 5-button view,
 which provides full utilization of the MIDI controller with these buttons.
 
+v.2.0.x
+Fixed color decode and combined executors
+Add Autocolor 2 mode (full rgb)
 
 --------------------
 
