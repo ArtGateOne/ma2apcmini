@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 2.1.0 - by ArtGateOne
+//ma2apcmini mk2 v 2.1.2 - by ArtGateOne
 var easymidi = require("easymidi");
 var W3CWebSocket = require("websocket").w3cwebsocket;
 var client = new W3CWebSocket("ws://localhost:80/"); //U can change localhost(127.0.0.1) to Your console IP address
@@ -11,22 +11,28 @@ const midi_in = "APC mini mk2"; //set correct midi in device name
 const midi_out = "APC mini mk2"; //set correct midi out device name
 const brightness = 6; //led brightness 0-6 (work in autocolor = 0)
 const color_scheme = 0; //color scheme - 0 = Default(AmberGreen) , 1 - dark (GrayGreen), 2 = extra (BlueRed)
-const autocolor = 0; //xecutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness), 3 MIX - 2color + Autocolor (full color)
+const autocolor = 3; //excutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness), 3 MIX - 2color + Autocolor (full color)
 const blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 
 //global variables
 var c1 = 0; //Color executor empty
 var c2 = 9; //color executor OFF
 var c3 = 21; //color executor ON
+var f1 = 0; //Fader empty
+var f2 = 9; //fadere off
+var f3 = 5;  //fader on
 var fx = 8; //blink channel
 let c1_hex = "#000000";
-let c2_hex = "#0000FF";
-let c3_hex = "#FFFF00";
+let c2_hex = "#FF5400";
+let c3_hex = "#00FF00";
 
 if (color_scheme === 1) {
   c1 = 0;
   c2 = 1;
   c3 = 21;
+  //f1 = 0;
+  //f2 = 1;
+  //f3 = 21;
   c1_hex = "#000000";
   c2_hex = "#0F0F0F";
   c3_hex = "#00FF00";
@@ -34,6 +40,9 @@ if (color_scheme === 1) {
   c1 = 0;
   c2 = 45;
   c3 = 5;
+  //f1 = 0;
+  //f2 = 1;
+  //f3 = 5;
   c1_hex = "#000000";
   c2_hex = "#0000FF";
   c3_hex = "#FF0000";
@@ -863,7 +872,67 @@ function led_feedback(i, j, l) {
       ledmatrix[j] = m;
       setPadColorHEX(output, j, obj.itemGroups[0].items[l][i].bdC);
     }
-  } else if (autocolor == 2) {
+  } else if (autocolor === 3) {
+    m = c1;
+    channel = brightness;
+    if (
+      obj.itemGroups[0].items[l][i].bdC == "#3D3D3D" ||
+      obj.itemGroups[0].items[l][i].bdC == "#FFFF80"
+    ) {
+      if (obj.itemGroups[0].items[l][i].isRun == 1) {
+        m = c3;
+        if (blink) {
+          channel = fx;
+        }
+      } else if (obj.itemGroups[0].items[l][i].bdC == "#FFFF80") {
+        m = c2;
+      } else {
+        m = c1;
+      }
+
+      if (ledmatrix[j] != m || led_isrun[j] != channel) {
+        led_isrun[j] = channel;
+        ledmatrix[j] = m;
+        output.send("noteon", { note: j, velocity: m, channel: channel });
+      }
+    } else {
+      if (obj.itemGroups[0].items[l][i].isRun == 1) {
+        m = getClosestVelocity(obj.itemGroups[0].items[l][i].bdC);
+        channel = fx;
+      } else if (obj.itemGroups[0].items[l][i].bdC == "#3D3D3D") {
+        m = c1;
+      } else {
+        m = getClosestVelocity(obj.itemGroups[0].items[l][i].bdC);
+      }
+
+      if (ledmatrix[j] != m || led_isrun[j] != channel) {
+        led_isrun[j] = channel;
+        ledmatrix[j] = m;
+        output.send("noteon", { note: j, velocity: m, channel: channel });
+      }
+    }
+
+    /*
+    if (isRun) {
+          let adjustedColor = adjustHexBrightness(color, request);
+          if (color == "#FFFF80") {
+            if (blink) {
+              adjustedColor = adjustHexBrightness(c3_hex, request);
+            } else {
+              adjustedColor = adjustHexBrightness(c3_hex, brightness);
+            }
+          }
+          setPadColorHEX(output, note, adjustedColor);
+        } else {
+          if (color == "#FFFF80") {
+            setPadColorHEX(output, note, c2_hex);
+          } else if (color == "#3D3D3D") {
+            setPadColorHEX(output, note, c1_hex);
+          } else {
+            setPadColorHEX(output, note, color);
+          }
+        }
+          */
   } else {
     m = c1;
     channel = brightness;
@@ -1364,7 +1433,6 @@ function adjustHexBrightness(hexColor, request) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-
 process.on("SIGINT", () => {
   interval_on = 0;
   console.log("CTRL+C -> awaryjne wyjście");
@@ -1395,8 +1463,7 @@ process.on("SIGTERM", () => {
   process.exit(1); // kod błędu
 });
 
-process.on('uncaughtException', (err) => {
-  console.error('Nieobsłużony wyjątek:', err.message);
+process.on("uncaughtException", (err) => {
+  console.error("Nieobsłużony wyjątek:", err.message);
   // Możesz tu np. spróbować ponownie połączyć z kontrolerem
 });
-
