@@ -25,7 +25,7 @@ double click on icon  ma2apcmini.js (for apc mini)
 
 or if u have mk2 model
 
- ma2apcminimk2.js
+ ma2apcmini_mk2.js
 
 
 ---------------------------------
@@ -52,15 +52,16 @@ midi_out = 'APC MINI';    //set correct midi out device name
 
 mk2 version and mk2 color
 
-//config 
-wing = 1;   //set wing 1 or 2 (or 3)
-pageselect = 1;   //set page select mode - 0-off, 1-only exec buttons(5), 2-exec buttons and faders together(5)
-midi_in = 'APC mini mk2';     //set correct midi in device name
-midi_out = 'APC mini mk2';    //set correct midi out device name
-brightness = 6;     //led brightness 0-6
-darkmode = 0;   //new color mode 1 - ON , 0 - OFF
-autocolor = 1;  //Executors color from apperance - 0 = off, 1 = ON
-blink = 0;      //no color Executor blink 1=on, 0=off 
+//config
+const wing = 1; //set wing 1, 2, or 3
+const pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
+const control_onpc_page = 1; // change pages onpc 0=off, 1=on
+const midi_in = "APC mini mk2"; //set correct midi in device name
+const midi_out = "APC mini mk2"; //set correct midi out device name
+const brightness = 6; //led brightness 0-6 (work in autocolor = 0)
+const color_scheme = 0; //color scheme - 0 = Default(AmberGreen) , 1 - dark (GrayGreen), 2 = extra (BlueRed)
+const autocolor = 0; //xecutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness), 3 MIX - 2color + Autocolor (full color)
+const blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 
 
 --------------------------------
@@ -139,6 +140,8 @@ var client = new W3CWebSocket('ws://localhost:80/');
 
 and change localhost:80 to console IP Addres
 
+if u have any problems with connection - try change localhost to 127.0.0.1
+
 -------------------------------- 
 
 
@@ -154,7 +157,7 @@ Color Green - if run
 
 Faders ( 3 x 8 )
 
-Color RED if programed
+Color Yellow if programed
 
 Color Green if run
 
@@ -185,37 +188,11 @@ U can use this code to control show only - not for programming
 
 !!! Program not work with old ma2onpc
 
-!! Program not work - if any executor have more then 1 row ! (thx Philipp Darpe) (only old vesrion and v2)
-
-! Only v3 version can work with 1-5 row executors ! (add 4.3.2025)
-
-
-V3 add control page command
-
-//config
-
-wing = 1; //set wing 1, 2, or 3
-
-pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
-
-control_onpc_page = 1; // change pages onpc 0=off, 1=on
-
-midi_in = "APC mini mk2"; //set correct midi in device name
-
-midi_out = "APC mini mk2"; //set correct midi out device name
-
-brightness = 6; //led brightness 0-6 (work in autocolor = 0)
-
-darkmode = 0; //new color mode 1 - ON , 0 - OFF (work in autocolor = 0)
-
-autocolor = 2; //xecutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness)
-
-blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
-
+!! Program not work - if any executor have more then 1 row ! (thx Philipp Darpe) (only old apc mini vesrion)
 
 v.1.7.x
 When the code starts, the Akai displays the active mode in a graphical form.
-Color v3 code received the wing=3 mode in a slightly modified form.
+Mk2 code received the wing=3 mode in a slightly modified form.
 In this mode, all faders 1–9 are supported.
 
 The buttons above them control the executor assigned to each fader (the last fader acts as a shift button and does not have LED feedback).
@@ -226,6 +203,17 @@ which provides full utilization of the MIDI controller with these buttons.
 v.2.0.x
 Fixed color decode and combined executors
 Add Autocolor 2 mode (full rgb)
+
+v.2.1
+Fixed close terminal function
+Change dark mode to color_scheme
+
+Add one mor scheme (Blue ReD)
+
+Add new Autocolor mode 2
+Is mixed 2 color and multicolor (executor with default apperance use 2 color scheme)
+
+WORK IN PROGRESS .... 
 
 --------------------
 
