@@ -1,29 +1,42 @@
-//ma2apcmini mk2 v 2.0.0 color v3 - by ArtGateOne
+//ma2apcmini mk2 v 2.1.0 - by ArtGateOne
 var easymidi = require("easymidi");
 var W3CWebSocket = require("websocket").w3cwebsocket;
 var client = new W3CWebSocket("ws://localhost:80/"); //U can change localhost(127.0.0.1) to Your console IP address
 
 //config
-wing = 1; //set wing 1, 2, or 3
-pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
-control_onpc_page = 1; // change pages onpc 0=off, 1=on
-midi_in = "APC mini mk2"; //set correct midi in device name
-midi_out = "APC mini mk2"; //set correct midi out device name
-brightness = 6; //led brightness 0-6 (work in autocolor = 0)
-darkmode = 0; //new color mode 1 - ON , 0 - OFF (work in autocolor = 0)
-autocolor = 2; //xecutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness)
-blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
+const wing = 1; //set wing 1, 2, or 3
+const pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
+const control_onpc_page = 1; // change pages onpc 0=off, 1=on
+const midi_in = "APC mini mk2"; //set correct midi in device name
+const midi_out = "APC mini mk2"; //set correct midi out device name
+const brightness = 6; //led brightness 0-6 (work in autocolor = 0)
+const color_scheme = 0; //color scheme - 0 = Default(AmberGreen) , 1 - dark (GrayGreen), 2 = extra (BlueRed)
+const autocolor = 0; //xecutors color from apperance - 0 = off, 1 = ON, 2 = ON (full color from apperance - no brighness), 3 MIX - 2color + Autocolor (full color)
+const blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 
 //global variables
 var c1 = 0; //Color executor empty
 var c2 = 9; //color executor OFF
 var c3 = 21; //color executor ON
 var fx = 8; //blink channel
+let c1_hex = "#000000";
+let c2_hex = "#0000FF";
+let c3_hex = "#FFFF00";
 
-if (darkmode === 1) {
-  var c1 = 0;
-  var c2 = 1;
-  var c3 = 21;
+if (color_scheme === 1) {
+  c1 = 0;
+  c2 = 1;
+  c3 = 21;
+  c1_hex = "#000000";
+  c2_hex = "#0F0F0F";
+  c3_hex = "#00FF00";
+} else if (color_scheme === 2) {
+  c1 = 0;
+  c2 = 45;
+  c3 = 5;
+  c1_hex = "#000000";
+  c2_hex = "#0000FF";
+  c3_hex = "#FF0000";
 }
 
 var channel = brightness;
@@ -604,7 +617,7 @@ client.onmessage = function (e) {
     if (obj.session) {
       if (obj.session == -1) {
         console.log(
-          'Please turn on Web Remote, and set Web Remote password to "remote"'
+          'Please run MA2, enable Remote Login , and add user "apcmini", password "remote"'
         );
         midiclear();
         input.close();
@@ -850,6 +863,7 @@ function led_feedback(i, j, l) {
       ledmatrix[j] = m;
       setPadColorHEX(output, j, obj.itemGroups[0].items[l][i].bdC);
     }
+  } else if (autocolor == 2) {
   } else {
     m = c1;
     channel = brightness;
@@ -1253,15 +1267,31 @@ function syncMidiFromMatrix(matrix, midiMatrix, wing = 1) {
       } else if (autocolor === 2) {
         velocity = getClosestVelocity(color);
         if (isRun) {
-          /*if (request < 6) {
-            setPadColorHEX(output, note, "#0F0F0F");
-          } else if (request >= 6) {
-            setPadColorHEX(output, note, color);
-          }*/
           const adjustedColor = adjustHexBrightness(color, request);
           setPadColorHEX(output, note, adjustedColor);
         } else {
           setPadColorHEX(output, note, color);
+        }
+      } else if (autocolor === 3) {
+        //velocity = getClosestVelocity(color);
+        if (isRun) {
+          let adjustedColor = adjustHexBrightness(color, request);
+          if (color == "#FFFF80") {
+            if (blink) {
+              adjustedColor = adjustHexBrightness(c3_hex, request);
+            } else {
+              adjustedColor = adjustHexBrightness(c3_hex, brightness);
+            }
+          }
+          setPadColorHEX(output, note, adjustedColor);
+        } else {
+          if (color == "#FFFF80") {
+            setPadColorHEX(output, note, c2_hex);
+          } else if (color == "#3D3D3D") {
+            setPadColorHEX(output, note, c1_hex);
+          } else {
+            setPadColorHEX(output, note, color);
+          }
         }
       }
 
@@ -1333,3 +1363,40 @@ function adjustHexBrightness(hexColor, request) {
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+
+
+process.on("SIGINT", () => {
+  interval_on = 0;
+  console.log("CTRL+C -> awaryjne wyjście");
+  midiclear();
+  client.close();
+  input.close();
+  output.close();
+  process.exit(1); // kod błędu
+});
+
+process.on("SIGHUP", () => {
+  interval_on = 0;
+  console.log("CTRL+C -> awaryjne wyjście");
+  midiclear();
+  client.close();
+  input.close();
+  output.close();
+  process.exit(1); // kod błędu
+});
+
+process.on("SIGTERM", () => {
+  interval_on = 0;
+  console.log("CTRL+C -> awaryjne wyjście");
+  midiclear();
+  client.close();
+  input.close();
+  output.close();
+  process.exit(1); // kod błędu
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Nieobsłużony wyjątek:', err.message);
+  // Możesz tu np. spróbować ponownie połączyć z kontrolerem
+});
+
