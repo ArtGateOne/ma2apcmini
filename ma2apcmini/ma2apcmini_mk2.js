@@ -1,4 +1,4 @@
-//ma2apcmini mk2 v 2.1.2 - by ArtGateOne
+//ma2apcmini mk2 v 2.1.4 - by ArtGateOne
 var easymidi = require("easymidi");
 var W3CWebSocket = require("websocket").w3cwebsocket;
 var client = new W3CWebSocket("ws://localhost:80/"); //U can change localhost(127.0.0.1) to Your console IP address
@@ -18,9 +18,9 @@ const blink = 0; //no color Executor blink 1=on, 0=off (work in autocolor = 0)
 var c1 = 0; //Color executor empty
 var c2 = 9; //color executor OFF
 var c3 = 21; //color executor ON
-var f1 = 0; //Fader empty
-var f2 = 9; //fadere off
-var f3 = 5;  //fader on
+//var f1 = 0; //Fader empty
+//var f2 = 9; //fadere off
+//var f3 = 5;  //fader on
 var fx = 8; //blink channel
 let c1_hex = "#000000";
 let c2_hex = "#FF5400";
@@ -1085,6 +1085,7 @@ const colorToVelocity = {
   "#B35F00": 126,
   "#4B1502": 127,
   "#3D3D3D": 0,
+  "#404040": 0,
 };
 
 // Funkcja konwertująca kolor z heksadecymalnego na wartości RGB z walidacją
@@ -1313,6 +1314,8 @@ function syncMidiFromMatrix(matrix, midiMatrix, wing = 1) {
         // Tryb bez kolorów – ręczne przypisanie velocity
         if (color === "#3D3D3D") {
           velocity = c1; // pusty
+        } else if (color === "#404040") {
+          velocity = c1; // pusty
         } else {
           velocity = isRun ? c3 : c2; // aktywny / wyłączony
         }
@@ -1357,6 +1360,8 @@ function syncMidiFromMatrix(matrix, midiMatrix, wing = 1) {
           if (color == "#FFFF80") {
             setPadColorHEX(output, note, c2_hex);
           } else if (color == "#3D3D3D") {
+            setPadColorHEX(output, note, c1_hex);
+            } else if (color == "#404040") {
             setPadColorHEX(output, note, c1_hex);
           } else {
             setPadColorHEX(output, note, color);
