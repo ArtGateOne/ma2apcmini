@@ -4,7 +4,7 @@ var W3CWebSocket = require("websocket").w3cwebsocket;
 var client = new W3CWebSocket("ws://127.0.0.1:80/"); //U can change localhost(127.0.0.1) to Your console IP address
 
 //config
-const wing = 1; //set wing 1, 2, or 3
+const wing = 3; //set wing 1, 2, or 3
 const pageselect = 1; //set page select mode - 0-off, 1-only exec buttons , 2-exec buttons and faders
 const control_onpc_page = 1; // change pages onpc 0=off, 1=on
 const midi_in = "APC mini mk2"; //set correct midi in device name
@@ -155,7 +155,7 @@ function sleep(time, callback) {
 //interval send data to server function
 function interval() {
   if (session > 0) {
-    if (wing == 1 || wing == 3) {
+    if (wing == 1) {
       client.send(
         '{"requestType":"playbacks","startIndex":[100],"itemsCount":[90],"pageIndex":' +
           pageIndex +
@@ -180,6 +180,21 @@ function interval() {
       );
       client.send(
         '{"requestType":"playbacks","startIndex":[0],"itemsCount":[15],"pageIndex":' +
+          pageIndex2 +
+          ',"itemsType":[2],"view":2,"execButtonViewMode":1,"buttonsViewMode":0,"session":' +
+          session +
+          ',"maxRequests":1}'
+      );
+    } else if (wing == 3) {
+      client.send(
+        '{"requestType":"playbacks","startIndex":[100],"itemsCount":[90],"pageIndex":' +
+          pageIndex +
+          ',"itemsType":[3],"view":3,"execButtonViewMode":2,"buttonsViewMode":0,"session":' +
+          session +
+          ',"maxRequests":1}'
+      );
+      client.send(
+        '{"requestType":"playbacks","startIndex":[15],"itemsCount":[10],"pageIndex":' +
           pageIndex2 +
           ',"itemsType":[2],"view":2,"execButtonViewMode":1,"buttonsViewMode":0,"session":' +
           session +
@@ -324,7 +339,7 @@ input.on("noteon", function (msg) {
     if (wing == 3) {
       client.send(
         '{"requestType":"playbacks_userInput","cmdline":"","execIndex":' +
-          (msg.note - 100) +
+          (msg.note - 85) +
           ',"pageIndex":' +
           pageIndex2 +
           ',"buttonId":0,"pressed":true,"released":false,"type":0,"session":' +
@@ -394,7 +409,7 @@ input.on("noteon", function (msg) {
       );
     } else if (wing == 3) {
       client.send(
-        '{"requestType":"playbacks_userInput","cmdline":"","execIndex":"8","pageIndex":' +
+        '{"requestType":"playbacks_userInput","cmdline":"","execIndex":"23","pageIndex":' +
           pageIndex2 +
           ',"buttonId":0,"pressed":true,"released":false,"type":0,"session":' +
           session +
@@ -455,7 +470,7 @@ input.on("noteoff", function (msg) {
     if (wing == 3) {
       client.send(
         '{"requestType":"playbacks_userInput","cmdline":"","execIndex":' +
-          (msg.note - 100) +
+          (msg.note - 85) +
           ',"pageIndex":' +
           pageIndex2 +
           ',"buttonId":0,"pressed":false,"released":true,"type":0,"session":' +
@@ -488,7 +503,7 @@ input.on("noteoff", function (msg) {
       blackout = 0;
     } else if (wing == 3) {
       client.send(
-        '{"requestType":"playbacks_userInput","cmdline":"","execIndex":"8","pageIndex":' +
+        '{"requestType":"playbacks_userInput","cmdline":"","execIndex":"23","pageIndex":' +
           pageIndex2 +
           ',"buttonId":0,"pressed":false,"released":true,"type":0,"session":' +
           session +
@@ -530,7 +545,7 @@ input.on("cc", function (msg) {
         );
       } else if (wing == 3) {
         client.send(
-          '{"requestType":"playbacks_userInput","execIndex":"8","pageIndex":' +
+          '{"requestType":"playbacks_userInput","execIndex":"23","pageIndex":' +
             pageIndex2 +
             ',"faderValue":' +
             faderValue[msg.value] +
@@ -543,7 +558,7 @@ input.on("cc", function (msg) {
       if (wing == 3) {
         client.send(
           '{"requestType":"playbacks_userInput","execIndex":' +
-            (msg.controller - 48) +
+            (msg.controller - 33) +
             ',"pageIndex":' +
             pageIndex2 +
             ',"faderValue":' +
